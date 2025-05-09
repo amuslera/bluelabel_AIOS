@@ -1,3 +1,4 @@
+# app/agents/base/agent.py
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 
@@ -10,7 +11,7 @@ class AgentTool:
         self.description = description
     
     @abstractmethod
-    async def execute(self, **kwargs):
+    async def execute(self, **kwargs) -> Dict[str, Any]:
         """Execute the tool with given parameters"""
         pass
 
@@ -34,4 +35,9 @@ class BluelabelAgent(ABC):
     
     def get_capabilities(self) -> Dict[str, Any]:
         """Return agent capabilities for discovery"""
-        pass
+        return {
+            "name": self.config.get("name", "unnamed_agent"),
+            "description": self.config.get("description", "No description provided"),
+            "supported_content_types": self.config.get("supported_content_types", []),
+            "features": self.config.get("features", [])
+        }
