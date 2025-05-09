@@ -37,6 +37,9 @@ class ModelRouter:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         
+        # Initialize available models
+        self.available_anthropic_models = []
+        
         logger.info(f"Model Router initialized. Local LLM enabled: {self.local_enabled}")
         logger.info(f"OpenAI API key available: {self.openai_api_key is not None}")
         logger.info(f"Anthropic API key available: {self.anthropic_api_key is not None}")
@@ -292,25 +295,33 @@ class ModelRouter:
             # Initialize client
             client = Anthropic(api_key=self.anthropic_api_key)
             
+            # Get available models if not already fetched
+            if not self.available_anthropic_models:
+                self.available_anthropic_models = await self._get_available_anthropic_models()
+            
             # Get parameters from requirements
-            # Use the updated model name format without date suffixes
             requested_model = requirements.get("model", "").lower()
             
-            # Map to current model names (as of May 2025)
-            model_mapping = {
-                "claude-3-opus-20240229": "claude-3-opus",
-                "claude-3-sonnet-20240229": "claude-3-sonnet",
-                "claude-3-haiku-20240307": "claude-3-haiku",
-                # Add fallbacks for models that might already be in the new format
-                "claude-3-opus": "claude-3-opus",
-                "claude-3-sonnet": "claude-3-sonnet",
-                "claude-3-haiku": "claude-3-haiku",
-            }
+            # Try to find a matching model from available models
+            model = None
+            if requested_model in self.available_anthropic_models:
+                model = requested_model
+            else:
+                # Try to find a model that starts with the requested name
+                matching_models = [m for m in self.available_anthropic_models if m.startswith(requested_model)]
+                if matching_models:
+                    model = matching_models[0]  # Use the first matching model
+                else:
+                    # If no match found, use the first available model
+                    model = self.available_anthropic_models[0] if self.available_anthropic_models else None
             
-            # Default to claude-3-sonnet if no match found
-            model = model_mapping.get(requested_model, "claude-3-sonnet")
+            if not model:
+                return {
+                    "status": "error",
+                    "message": "No available Anthropic models found"
+                }
             
-            # Log the model mapping for debugging
+            # Log the model selection for debugging
             logger.info(f"Requested Anthropic model: {requested_model}")
             logger.info(f"Using Anthropic model: {model}")
             
@@ -395,3 +406,21 @@ Tags:"""
         
         else:
             return f"Process the following content for task '{task}':\n\n{content.get('text', '')}"
+
+    async def _get_available_anthropic_models(self) -> List[str]:
+        """Fetch available models from Anthropic API"""
+        if not self.anthropic_api_key:
+            return []
+        
+        try:
+            from anthropic import Anthropic
+            client = Anthropic(api_key=self.anthropic_api_key)
+            
+            # Fetch available models
+            response = client.models.list()
+            models = [model.id for model in response.data]
+            logger.info(f"Available Anthropic models: {models}")
+            return models
+        except Exception as e:
+            logger.error(f"Error fetching Anthropic models: {str(e)}")
+            return []
