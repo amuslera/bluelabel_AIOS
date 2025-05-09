@@ -15,6 +15,10 @@ class OllamaClient:
         self.api_base = f"{host}/api"
         logger.info(f"Initialized Ollama client with host: {host}")
     
+    async def test_connection(self) -> bool:
+        """Alias for is_available for compatibility"""
+        return await self.is_available()
+
     async def is_available(self) -> bool:
         """Check if Ollama service is available"""
         try:
