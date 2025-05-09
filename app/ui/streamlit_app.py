@@ -3,6 +3,7 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime
+import os
 
 # Set Streamlit page configuration
 st.set_page_config(
@@ -230,27 +231,63 @@ def settings_page():
     
     # Get current settings
     try:
-        response = requests.get(f"{API_ENDPOINT}/")
-        if response.status_code == 200:
-            # In a real app, we would have an endpoint to get current settings
-            # For now, we'll use default values
-            current_local_llm = False
-            current_cloud_provider = "OpenAI"
-            current_local_model = "llama3"
-    except:
+        # Get local LLM status
+        local_status = requests.get(f"{API_ENDPOINT}/test-local")
+        local_available = local_status.status_code == 200 and local_status.json().get("status") == "success"
+        
+        # Get available local models
+        models_response = requests.get(f"{API_ENDPOINT}/list-local-models")
+        available_models = []
+        if models_response.status_code == 200:
+            models_data = models_response.json()
+            if models_data.get("status") == "success":
+                available_models = models_data.get("models", [])
+        
+        # Get current settings from environment
+        current_local_llm = os.getenv("LOCAL_LLM_ENABLED", "false").lower() == "true"
+        current_local_model = os.getenv("LOCAL_LLM_MODEL", "llama3")
+        current_cloud_provider = "OpenAI" if os.getenv("OPENAI_API_KEY") else "Anthropic"
+    except Exception as e:
+        st.warning(f"Could not fetch current settings: {str(e)}")
         current_local_llm = False
         current_cloud_provider = "OpenAI"
         current_local_model = "llama3"
+        available_models = []
+        local_available = False
     
     # Local LLM settings
+    st.write("Local LLM Status:", "🟢 Available" if local_available else "🔴 Not Available")
     use_local_llm = st.checkbox("Use Local LLM when available", value=current_local_llm)
     
     if use_local_llm:
-        local_model = st.selectbox(
-            "Local Model",
-            ["llama3", "mistral", "llama3:8b", "mistral:7b", "orca-mini"],
-            index=0
-        )
+        if not local_available:
+            st.warning("Local LLM is not available. Please make sure Ollama is running.")
+        else:
+            if not available_models:
+                st.info("No local models found. The system will attempt to pull the selected model when needed.")
+            
+            # Extract model names from Ollama's response
+            model_names = [m["name"] for m in available_models if isinstance(m, dict) and "name" in m]
+            local_model = st.selectbox(
+                "Local Model",
+                ["llama3", "mistral", "llama3:8b", "mistral:7b", "orca-mini"] + model_names,
+                index=0
+            )
+            
+            # Add a button to pull the selected model
+            if st.button("Pull Selected Model"):
+                with st.spinner(f"Pulling model {local_model}..."):
+                    try:
+                        response = requests.post(
+                            f"{API_ENDPOINT}/test-local",
+                            json={"model": local_model}
+                        )
+                        if response.status_code == 200:
+                            st.success(f"Successfully pulled model {local_model}")
+                        else:
+                            st.error(f"Failed to pull model: {response.text}")
+                    except Exception as e:
+                        st.error(f"Error pulling model: {str(e)}")
     
     # Cloud provider settings
     st.subheader("Cloud Provider Settings")
@@ -274,62 +311,19 @@ def settings_page():
             index=0
         )
     
-    st.subheader("Task-Specific Provider Preferences")
-    
-    summarization_provider = st.selectbox(
-        "Summarization Provider",
-        ["Auto (Based on Complexity)", "OpenAI", "Anthropic", "Local (if available)"],
-        index=0
-    )
-    
-    entity_extraction_provider = st.selectbox(
-        "Entity Extraction Provider",
-        ["Auto (Based on Complexity)", "OpenAI", "Anthropic", "Local (if available)"],
-        index=0
-    )
-    
-    tagging_provider = st.selectbox(
-        "Content Tagging Provider",
-        ["Auto (Based on Complexity)", "OpenAI", "Anthropic", "Local (if available)"],
-        index=0
-    )
-    
-    # Content Processing Settings
-    st.subheader("Content Processing Settings")
-    
-    max_content_length = st.slider(
-        "Maximum Content Length (characters)",
-        min_value=1000,
-        max_value=100000,
-        value=50000,
-        step=1000
-    )
-    
     # Save settings button
     if st.button("Save Settings"):
-        # In a real app, we would send these settings to the backend
-        # For now, we'll just display a success message
-        settings_to_update = {
+        # In a real app, we would save these settings to a configuration file or database
+        # For now, we'll just show a success message
+        st.success("Settings saved! Note: In a production environment, these settings would be persisted.")
+        
+        # Show what would be saved
+        st.json({
             "LOCAL_LLM_ENABLED": use_local_llm,
-            "LOCAL_LLM_MODEL": local_model if use_local_llm else "llama3",
+            "LOCAL_LLM_MODEL": local_model if use_local_llm else None,
             "CLOUD_PROVIDER": cloud_provider,
-            "CLOUD_MODEL": model,
-            "SUMMARIZATION_PROVIDER": summarization_provider,
-            "ENTITY_EXTRACTION_PROVIDER": entity_extraction_provider,
-            "TAGGING_PROVIDER": tagging_provider,
-            "MAX_CONTENT_LENGTH": max_content_length
-        }
-        
-        st.success(f"Settings saved! {settings_to_update}\n\nNote: You need to restart the API server for these changes to take effect, or update your .env file directly.")
-        
-        # Also show the environment variables to set
-        st.code(f"""
-# Add these to your .env file:
-LOCAL_LLM_ENABLED={"true" if use_local_llm else "false"}
-LOCAL_LLM_MODEL={local_model if use_local_llm else "llama3"}
-PREFERRED_CLOUD_PROVIDER={cloud_provider.upper()}
-PREFERRED_MODEL={model}
-        """)
+            "CLOUD_MODEL": model
+        })
 
 if __name__ == "__main__":
     main()

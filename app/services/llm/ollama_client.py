@@ -39,6 +39,36 @@ class OllamaClient:
             logger.error(f"Error listing models: {str(e)}")
             return {"models": []}
     
+    async def pull_model(self, model: str) -> Dict[str, Any]:
+        """Pull a model from Ollama"""
+        try:
+            payload = {
+                "name": model
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"{self.api_base}/pull", json=payload) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return {
+                            "status": "success",
+                            "model": model,
+                            "message": "Model pulled successfully"
+                        }
+                    else:
+                        error_text = await response.text()
+                        logger.warning(f"Failed to pull model: {response.status}, {error_text}")
+                        return {
+                            "status": "error",
+                            "message": f"Failed to pull model: {response.status}, {error_text}"
+                        }
+        except Exception as e:
+            logger.error(f"Error pulling model: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Error pulling model: {str(e)}"
+            }
+    
     async def generate(self, 
                       prompt: str, 
                       model: str = "llama3", 

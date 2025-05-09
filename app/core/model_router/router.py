@@ -49,6 +49,17 @@ class ModelRouter:
         if not self.local_enabled or not self.ollama_client:
             return False
         
+        # First check if the model exists
+        try:
+            models = await self.ollama_client.list_models()
+            if self.local_model not in models:
+                logger.info(f"Local model {self.local_model} not found, attempting to pull it...")
+                await self.ollama_client.pull_model(self.local_model)
+                logger.info(f"Successfully pulled model {self.local_model}")
+        except Exception as e:
+            logger.error(f"Error checking/pulling local model: {str(e)}")
+            return False
+        
         return await self.ollama_client.is_available()
     
     async def assess_complexity(self, task: str, content: Dict[str, Any]) -> float:
@@ -80,36 +91,14 @@ class ModelRouter:
             elif provider_preference == Provider.ANTHROPIC:
                 return await self._process_with_anthropic(task, content, requirements)
             elif provider_preference == Provider.LOCAL:
-                local_available = await self.is_local_available()
-                if not local_available:
-                    logger.warning("Local LLM requested but not available, falling back to cloud")
-                    # Fall back to cloud - select based on available API keys
-                    if self.openai_api_key:
-                        return await self._process_with_openai(task, content, requirements)
-                    elif self.anthropic_api_key:
-                        return await self._process_with_anthropic(task, content, requirements)
-                    else:
-                        return {"status": "error", "message": "No cloud providers configured for fallback"}
-                else:
-                    return await self._process_with_local(task, content, requirements)
+                # Try local first, with automatic fallback to cloud
+                return await self._process_with_local(task, content, requirements)
         
         # If model type is explicitly specified, respect it
         if model_preference:
             if model_preference == ModelType.LOCAL:
-                local_available = await self.is_local_available()
-                if not local_available:
-                    logger.warning("Local LLM requested but not available, falling back to cloud")
-                    # Fall back to preferred cloud provider
-                    if provider_preference == Provider.ANTHROPIC and self.anthropic_api_key:
-                        return await self._process_with_anthropic(task, content, requirements)
-                    elif self.openai_api_key:
-                        return await self._process_with_openai(task, content, requirements)
-                    elif self.anthropic_api_key:
-                        return await self._process_with_anthropic(task, content, requirements)
-                    else:
-                        return {"status": "error", "message": "No cloud providers configured for fallback"}
-                else:
-                    return await self._process_with_local(task, content, requirements)
+                # Try local first, with automatic fallback to cloud
+                return await self._process_with_local(task, content, requirements)
             else:  # CLOUD is requested
                 # Use preferred cloud provider
                 if provider_preference == Provider.ANTHROPIC and self.anthropic_api_key:
@@ -133,12 +122,12 @@ class ModelRouter:
             # Claude is particularly good at structured data tasks
             return await self._process_with_anthropic(task, content, requirements)
         
-        # Use local for simpler tasks if available, cloud for complex tasks
-        if complexity < 0.5 and is_local_available:
-            logger.info(f"Routing task '{task}' to local LLM (complexity: {complexity})")
+        # Always try local first if available, regardless of complexity
+        if is_local_available:
+            logger.info(f"Attempting task '{task}' with local LLM first")
             return await self._process_with_local(task, content, requirements)
         else:
-            logger.info(f"Routing task '{task}' to cloud LLM (complexity: {complexity})")
+            logger.info(f"Local LLM not available, routing task '{task}' to cloud LLM")
             # Choose cloud provider based on preference, availability, and task
             if provider_preference == Provider.ANTHROPIC and self.anthropic_api_key:
                 return await self._process_with_anthropic(task, content, requirements)
@@ -174,31 +163,44 @@ class ModelRouter:
         model = requirements.get("model", self.local_model)
         max_tokens = requirements.get("max_tokens", 500)
         temperature = requirements.get("temperature", 0.0)  # Lower for more deterministic outputs
+        timeout = requirements.get("timeout", 10)  # Default timeout of 10 seconds
         
         # Use specialized system prompts for different tasks
         system_prompt = self._create_system_prompt(task)
         
-        # Generate response with Ollama
-        logger.info(f"Generating with local model: {model}")
-        response = await self.ollama_client.generate(
-            prompt=prompt,
-            model=model,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-        
-        if response.get("status") == "success":
-            return {
-                "status": "success",
-                "provider": Provider.LOCAL,
-                "model": model,
-                "result": response.get("result", ""),
-                "processed_at": datetime.now().isoformat()
-            }
-        else:
-            # If local fails, fall back to cloud
-            logger.warning(f"Local LLM processing failed: {response.get('message')}. Falling back to cloud.")
+        try:
+            # Generate response with Ollama with timeout
+            logger.info(f"Generating with local model: {model}")
+            import asyncio
+            response = await asyncio.wait_for(
+                self.ollama_client.generate(
+                    prompt=prompt,
+                    model=model,
+                    system_prompt=system_prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                ),
+                timeout=timeout
+            )
+            
+            if response.get("status") == "success":
+                return {
+                    "status": "success",
+                    "provider": Provider.LOCAL,
+                    "model": model,
+                    "result": response.get("result", ""),
+                    "processed_at": datetime.now().isoformat()
+                }
+            else:
+                # If local fails, fall back to cloud
+                logger.warning(f"Local LLM processing failed: {response.get('message')}. Falling back to cloud.")
+                return await self._process_with_cloud(task, content, requirements)
+                
+        except asyncio.TimeoutError:
+            logger.warning(f"Local LLM processing timed out after {timeout} seconds. Falling back to cloud.")
+            return await self._process_with_cloud(task, content, requirements)
+        except Exception as e:
+            logger.error(f"Error in local LLM processing: {str(e)}. Falling back to cloud.")
             return await self._process_with_cloud(task, content, requirements)
     
     async def _process_with_cloud(self, task: str, content: Dict[str, Any], 

@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 import os
 from dotenv import load_dotenv
@@ -133,7 +133,7 @@ async def test_anthropic():
 
 
 @app.get("/test-local")
-async def test_local():
+async def test_local(model: Optional[str] = None):
     """Test the local LLM integration"""
     try:
         # First check if local LLM is available
@@ -144,12 +144,25 @@ async def test_local():
                 "message": "Local LLM is not available"
             }
         
+        # If a model is specified, try to pull it
+        if model:
+            if not model_router.ollama_client:
+                return {
+                    "status": "error",
+                    "message": "Local LLM client not initialized"
+                }
+            
+            # Try to pull the model
+            pull_result = await model_router.ollama_client.pull_model(model)
+            if pull_result.get("status") != "success":
+                return pull_result
+        
         # Create a simple request to test the model router
         test_content = {"text": "This is a test message. Please summarize it."}
         result = await model_router._process_with_local(
             task="summarize", 
             content=test_content, 
-            requirements={}
+            requirements={"model": model} if model else {}
         )
         return {
             "status": "success",
@@ -157,6 +170,29 @@ async def test_local():
         }
     except Exception as e:
         logger.error(f"Error testing local LLM: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+@app.get("/list-local-models")
+async def list_local_models():
+    """List available local LLM models"""
+    try:
+        if not model_router.ollama_client:
+            return {
+                "status": "error",
+                "message": "Local LLM client not initialized"
+            }
+        
+        models = await model_router.ollama_client.list_models()
+        return {
+            "status": "success",
+            "models": models
+        }
+    except Exception as e:
+        logger.error(f"Error listing local models: {str(e)}")
         return {
             "status": "error",
             "message": str(e)
@@ -204,4 +240,24 @@ async def test_anthropic_simple():
         return {
             "status": "error",
             "message": f"Error importing or initializing Anthropic: {str(e)}"
+        }
+
+
+@app.post("/pull-model")
+async def pull_model(model: str):
+    """Pull a specific model from Ollama"""
+    try:
+        if not model_router.ollama_client:
+            return {
+                "status": "error",
+                "message": "Local LLM client not initialized"
+            }
+        
+        result = await model_router.ollama_client.pull_model(model)
+        return result
+    except Exception as e:
+        logger.error(f"Error pulling model: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e)
         }
