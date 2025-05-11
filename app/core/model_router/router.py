@@ -1,22 +1,14 @@
 # app/core/model_router/router.py
 from typing import Dict, Any, List, Optional
-from enum import Enum
 import logging
 import os
 import json
 from datetime import datetime
+from app.core.registry.service_provider import get_component_registry
+from app.core.model_router import ModelType, Provider
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-class ModelType(str, Enum):
-    LOCAL = "local"
-    CLOUD = "cloud"
-
-class Provider(str, Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    LOCAL = "local"
 
 class ModelRouter:
     """Routes requests to appropriate LLM based on context"""

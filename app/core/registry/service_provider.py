@@ -9,7 +9,6 @@ import os
 from typing import Dict, Any
 
 from app.core.mcp import ComponentRegistry, ComponentEditor, ComponentTester
-from app.core.model_router import ModelRouter
 
 # Singleton instances
 _component_registry = None
@@ -51,35 +50,36 @@ def get_component_editor() -> ComponentEditor:
     
     return _component_editor
 
-def get_model_router() -> ModelRouter:
+def get_model_router():
     """Get the model router singleton.
-    
+
     Returns:
         The model router instance.
     """
     global _model_router
-    
+
     if _model_router is None:
         from app.core.model_router.router import ModelRouter
         from app.core.config import get_config
         config = get_config()
         _model_router = ModelRouter(config.get("llm", {}))
-    
+
     return _model_router
 
 def get_component_tester() -> ComponentTester:
     """Get the component tester singleton.
-    
+
     Returns:
         The component tester instance.
     """
     global _component_tester
-    
+
     if _component_tester is None:
         registry = get_component_registry()
-        model_router = get_model_router()
-        _component_tester = ComponentTester(registry, model_router)
-    
+        # Import here to avoid circular imports
+        router = get_model_router()
+        _component_tester = ComponentTester(registry, router)
+
     return _component_tester
 
 def initialize_mcp_system(config: Dict[str, Any] = None) -> None:

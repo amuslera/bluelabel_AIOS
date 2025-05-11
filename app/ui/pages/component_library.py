@@ -51,7 +51,8 @@ def render_library_tab():
         
         tag_filter = st.multiselect(
             "Filter by Tags",
-            sorted(list(all_tags))
+            sorted(list(all_tags)),
+            key="library_tag_filter"
         )
     
     with col2:
@@ -189,7 +190,7 @@ def render_component_details(component_id: str):
     
     # Template
     st.markdown("### Template")
-    st.text_area("", value=component['template'], height=300, disabled=True)
+    st.text_area("", value=component['template'], height=300, disabled=True, key="component_template")
     
     # Metadata
     if component.get("metadata"):
@@ -353,7 +354,8 @@ def render_export_tab():
     # Filter options
     filter_tags = st.multiselect(
         "Filter by Tags",
-        sorted(list(all_tags))
+        sorted(list(all_tags)),
+        key="export_tag_filter"
     )
     
     # Apply tag filter

@@ -356,7 +356,7 @@ def render_test_tab():
                 st.session_state.test_inputs[input_name] = st.text_area(
                     f"{input_name}",
                     value=st.session_state.test_inputs.get(input_name, ""),
-                    height=100 if len(st.session_state.test_inputs.get(input_name, "")) > 50 else 50
+                    height=100 if len(st.session_state.test_inputs.get(input_name, "")) > 50 else 70
                 )
         
         # Optional inputs
@@ -366,7 +366,7 @@ def render_test_tab():
                 st.session_state.test_inputs[input_name] = st.text_area(
                     f"{input_name} (optional)",
                     value=st.session_state.test_inputs.get(input_name, ""),
-                    height=100 if len(st.session_state.test_inputs.get(input_name, "")) > 50 else 50
+                    height=100 if len(st.session_state.test_inputs.get(input_name, "")) > 50 else 70
                 )
         
         # Test options

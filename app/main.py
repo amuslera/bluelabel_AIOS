@@ -137,15 +137,29 @@ async def test_process(
             "message": f"Error in test processing: {str(e)}"
         }
 
-@app.get("/knowledge/{content_id}")
-async def get_content(
-    content_id: str,
+# Knowledge repository endpoints
+# IMPORTANT: Specific endpoints must come BEFORE parameter endpoints in FastAPI
+
+@app.get("/knowledge/list")
+async def list_knowledge(
+    content_type: Optional[str] = None,
+    tags: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """Retrieve content by ID"""
-    result = await knowledge_service.retrieve_content(content_id)
-    if result.get("status") != "success":
-        raise HTTPException(status_code=404, detail=result.get("message"))
+    """List content from knowledge repository"""
+    # Convert tags string to list if provided
+    tags_list = None
+    if tags:
+        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+    result = await knowledge_service.list_content(
+        content_type=content_type,
+        tags=tags_list,
+        limit=limit,
+        offset=offset
+    )
     return result
 
 @app.get("/knowledge/search")
@@ -161,7 +175,7 @@ async def search_knowledge(
     tags_list = None
     if tags:
         tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-    
+
     result = await knowledge_service.search(
         query=query,
         content_type=content_type,
@@ -170,26 +184,15 @@ async def search_knowledge(
     )
     return result
 
-@app.get("/knowledge/list")
-async def list_knowledge(
-    content_type: Optional[str] = None,
-    tags: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
+@app.get("/knowledge/{content_id}")
+async def get_content(
+    content_id: str,
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """List content from knowledge repository"""
-    # Convert tags string to list if provided
-    tags_list = None
-    if tags:
-        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-    
-    result = await knowledge_service.list_content(
-        content_type=content_type,
-        tags=tags_list,
-        limit=limit,
-        offset=offset
-    )
+    """Retrieve content by ID"""
+    result = await knowledge_service.retrieve_content(content_id)
+    if result.get("status") != "success":
+        raise HTTPException(status_code=404, detail=result.get("message"))
     return result
 
 @app.delete("/knowledge/{content_id}")

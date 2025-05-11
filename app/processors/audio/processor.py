@@ -44,7 +44,7 @@ class AudioProcessor:
             # Process the audio content based on what was provided
             if isinstance(audio_content, str):
                 # Check if it's a file path or base64
-                if audio_content.startswith("data:audio"):
+                if audio_content.startswith("data:audio") or audio_content.startswith("data:mp3") or audio_content.startswith("data:"):
                     # Process base64 encoded audio
                     return await self._process_from_base64(audio_content)
                 else:
@@ -70,8 +70,38 @@ class AudioProcessor:
         """Process audio from a file path"""
         try:
             self.logger.info(f"Transcribing audio from file path: {file_path}")
-            result = self.model.transcribe(file_path)
-            return self._build_response(result, os.path.basename(file_path))
+            
+            # Create a temp dir with short path to avoid command line length issues
+            temp_dir = tempfile.mkdtemp(prefix="a_")
+            filename = os.path.basename(file_path)
+            extension = os.path.splitext(filename)[1] if os.path.splitext(filename)[1] else ".wav"
+            temp_path = os.path.join(temp_dir, f"a{extension}")
+            
+            try:
+                # Copy the file to a short path location
+                import shutil
+                shutil.copy(file_path, temp_path)
+                
+                # Use audio loader to handle the file without full ffmpeg command
+                import numpy as np
+                try:
+                    # Try direct transcription first
+                    result = self.model.transcribe(temp_path)
+                except Exception as e:
+                    self.logger.warning(f"Direct transcription failed, trying alternate method: {str(e)}")
+                    # If that fails, try loading the audio as an array first
+                    import librosa
+                    audio_array, sr = librosa.load(temp_path, sr=16000)
+                    result = self.model.transcribe(audio_array)
+                
+                return self._build_response(result, filename)
+            finally:
+                # Clean up the temporary directory and all files in it
+                try:
+                    shutil.rmtree(temp_dir)
+                    self.logger.info(f"Cleaned up temporary directory {temp_dir}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to delete temporary directory {temp_dir}: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error transcribing audio file {file_path}: {str(e)}")
             return {
@@ -82,10 +112,11 @@ class AudioProcessor:
     async def _process_from_bytes(self, content: Union[bytes, BinaryIO]) -> Dict[str, Any]:
         """Process audio from bytes or file-like object"""
         try:
-            # Save bytes to a temporary file for Whisper to process
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-                temp_path = temp_file.name
-                
+            # Create a temp dir with short path to avoid command line length issues
+            temp_dir = tempfile.mkdtemp(prefix="a_")
+            temp_path = os.path.join(temp_dir, "a.wav")
+            
+            try:
                 # If it's a file-like object, read its content
                 if hasattr(content, 'read'):
                     content_bytes = content.read()
@@ -97,19 +128,33 @@ class AudioProcessor:
                     content_bytes = content
                     filename = "audio_file"
                 
-                # Write bytes to temp file
-                temp_file.write(content_bytes)
-            
-            self.logger.info(f"Transcribing audio from bytes (saved to temp file: {temp_path})")
-            result = self.model.transcribe(temp_path)
-            
-            # Clean up the temporary file
-            try:
-                os.unlink(temp_path)
-            except Exception as e:
-                self.logger.warning(f"Failed to delete temporary file {temp_path}: {str(e)}")
-            
-            return self._build_response(result, filename)
+                # Write bytes to temp file with a short path
+                with open(temp_path, 'wb') as f:
+                    f.write(content_bytes)
+                
+                self.logger.info(f"Transcribing audio from bytes (saved to temp file: {temp_path})")
+                
+                # Use audio loader to handle the file without full ffmpeg command
+                import numpy as np
+                try:
+                    # Try direct transcription first
+                    result = self.model.transcribe(temp_path)
+                except Exception as e:
+                    self.logger.warning(f"Direct transcription failed, trying alternate method: {str(e)}")
+                    # If that fails, try loading the audio as an array first
+                    import librosa
+                    audio_array, sr = librosa.load(temp_path, sr=16000)
+                    result = self.model.transcribe(audio_array)
+                
+                return self._build_response(result, filename)
+            finally:
+                # Clean up the temporary directory and all files in it
+                try:
+                    import shutil
+                    shutil.rmtree(temp_dir)
+                    self.logger.info(f"Cleaned up temporary directory {temp_dir}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to delete temporary directory {temp_dir}: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error transcribing audio from bytes: {str(e)}")
             return {
@@ -121,18 +166,40 @@ class AudioProcessor:
         """Process audio from base64 encoded data"""
         try:
             import base64
-            from io import BytesIO
+            import shutil
             
-            # Extract the base64 data part and content type
-            parts = base64_data.split(',')
-            if len(parts) != 2:
-                return {
-                    "status": "error",
-                    "message": "Invalid base64 audio data format"
-                }
+            # Don't use the full base64_data string in logs or filenames to avoid "filename too long" errors
+            self.logger.info(f"Processing base64 audio data (length: {len(base64_data)})")
             
-            header = parts[0]
-            content_type = header.split(':')[1].split(';')[0] if ':' in header else "audio/unknown"
+            # Special handling for data URI format
+            content_type = "audio/unknown"
+            base64_part = base64_data
+            
+            # If it's a data URI (e.g., data:audio/mp3;base64,XXXX)
+            if base64_data.startswith('data:'):
+                # Extract the content type and base64 part carefully
+                # Parse without using the full string in error messages
+                header_end = base64_data.find(',')
+                if header_end > 0:
+                    header = base64_data[:header_end]
+                    base64_part = base64_data[header_end + 1:]
+                    
+                    # Get content type
+                    if ':' in header:
+                        type_parts = header.split(':')
+                        if len(type_parts) > 1 and ';' in type_parts[1]:
+                            content_type = type_parts[1].split(';')[0]
+                        else:
+                            content_type = type_parts[1]
+                else:
+                    self.logger.warning("Invalid base64 data format, missing comma separator")
+                    return {
+                        "status": "error",
+                        "message": "Invalid base64 audio data format"
+                    }
+            else:
+                # If it's just base64 data without the prefix
+                base64_part = base64_data
             
             # Determine file extension based on content type
             extension = ".wav"  # Default
@@ -141,24 +208,45 @@ class AudioProcessor:
             elif "m4a" in content_type or "mp4" in content_type:
                 extension = ".m4a"
             
-            # Decode base64 to bytes
-            audio_bytes = base64.b64decode(parts[1])
+            # Create a temp dir with very short path
+            temp_dir = tempfile.mkdtemp(prefix="a_")
+            temp_path = os.path.join(temp_dir, f"a{extension}")
             
-            # Save to temporary file
-            with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as temp_file:
-                temp_path = temp_file.name
-                temp_file.write(audio_bytes)
-            
-            self.logger.info(f"Transcribing audio from base64 (saved to temp file: {temp_path})")
-            result = self.model.transcribe(temp_path)
-            
-            # Clean up the temporary file
             try:
-                os.unlink(temp_path)
-            except Exception as e:
-                self.logger.warning(f"Failed to delete temporary file {temp_path}: {str(e)}")
-            
-            return self._build_response(result, f"audio_file{extension}")
+                # Decode and write base64 to the temp file
+                try:
+                    audio_bytes = base64.b64decode(base64_part)
+                    with open(temp_path, 'wb') as f:
+                        f.write(audio_bytes)
+                except Exception as decode_error:
+                    self.logger.error(f"Failed to decode base64 data: {str(decode_error)}")
+                    return {
+                        "status": "error",
+                        "message": f"Failed to decode audio data: {str(decode_error)}"
+                    }
+                
+                self.logger.info(f"Transcribing audio from base64 (saved to temp file: {temp_path})")
+                
+                # Use audio loader to handle the file without full ffmpeg command
+                import numpy as np
+                try:
+                    # Try direct transcription first
+                    result = self.model.transcribe(temp_path)
+                except Exception as e:
+                    self.logger.warning(f"Direct transcription failed, trying alternate method: {str(e)}")
+                    # If that fails, try loading the audio as an array first
+                    import librosa
+                    audio_array, sr = librosa.load(temp_path, sr=16000)
+                    result = self.model.transcribe(audio_array)
+                
+                return self._build_response(result, f"audio_file{extension}")
+            finally:
+                # Clean up the temporary directory and all files in it
+                try:
+                    shutil.rmtree(temp_dir)
+                    self.logger.info(f"Cleaned up temporary directory {temp_dir}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to delete temporary directory {temp_dir}: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error transcribing audio from base64: {str(e)}")
             return {

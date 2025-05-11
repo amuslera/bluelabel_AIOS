@@ -3,8 +3,12 @@
 This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
 
 ## [Unreleased]
-- Robust upsert logic for MCP system and agent components (no duplicate ID errors)
-- Fixed config import and ModelRouter initialization
+- Fixed FastAPI route ordering for knowledge repository endpoints
+- Added unique keys to Streamlit multiselect components to prevent duplicate ID errors
+- Increased minimum height of text_area elements to meet Streamlit requirements
+- Fixed ModelRouter circular import issues
+- Enhanced audio processing with robust error handling and fallback mechanisms
+- Improved entity extraction with better parsing of non-JSON outputs
 - All core endpoints tested and passing
 - Improved maintainability and restart safety
 

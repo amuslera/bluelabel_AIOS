@@ -261,10 +261,74 @@ class TaggerTool(AgentTool):
 
 class ContentMindAgent(BluelabelAgent):
     """Agent for processing and organizing content"""
-    
+
     def __init__(self, config: Dict[str, Any], model_router: ModelRouter):
         self.model_router = model_router
         super().__init__(config)
+
+    def _parse_entity_text(self, text: str) -> Dict[str, List[str]]:
+        """Parse entity text from LLM output when it's not valid JSON
+
+        Tries to handle structured text like:
+        People: Alice, Bob
+        Organizations: Acme Inc., XYZ Corp.
+
+        Returns:
+            Dict with entity categories as keys and lists of entities as values
+        """
+        result = {}
+
+        # Handle case with no content
+        if not text or text.strip() == "":
+            return {}
+
+        # First, see if the text has category headings
+        lines = text.strip().split('\n')
+        current_category = None
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check if this is a category line (ends with a colon)
+            if ":" in line:
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    category = parts[0].strip()
+                    items_text = parts[1].strip()
+
+                    # If category is valid and has content
+                    if category and items_text:
+                        # Split by commas, then clean up each item
+                        items = [item.strip().rstrip('.') for item in items_text.split(',')]
+                        items = [item for item in items if item]  # Filter out empty items
+
+                        if items:
+                            result[category] = items
+
+                    # If only the category is on this line, remember it for the next line
+                    elif category and not items_text:
+                        current_category = category
+
+            # This line continues the previous category
+            elif current_category:
+                items = [item.strip().rstrip('.') for item in line.split(',')]
+                items = [item for item in items if item]  # Filter out empty items
+
+                if items:
+                    if current_category in result:
+                        result[current_category].extend(items)
+                    else:
+                        result[current_category] = items
+
+        # If we found at least one valid category, return the result
+        if result:
+            return result
+
+        # If no structured format was detected, try to extract entities by splitting sentences
+        sentences = text.split('.')
+        return {"entities": [sentence.strip() for sentence in sentences if sentence.strip()]}        
 
     def _register_tools(self) -> List[AgentTool]:
         """Register tools available to this agent"""
@@ -412,16 +476,37 @@ class ContentMindAgent(BluelabelAgent):
                     # The result might be a JSON string or already parsed
                     entity_text = entity_result.get("result", "{}")
                     if isinstance(entity_text, str):
-                        try:
-                            entities = json.loads(entity_text)
-                        except json.JSONDecodeError:
-                            logger.warning("Failed to parse entity result as JSON")
-                            entities = {"error": "Failed to parse entities", "raw": entity_text}
+                        # Try to clean up the string before parsing
+                        entity_text = entity_text.strip()
+                        # Make sure it's not just plain text
+                        if entity_text.startswith("{") and entity_text.endswith("}"):
+                            try:
+                                entities = json.loads(entity_text)
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Failed to parse entity result as JSON: {str(e)}")
+                                # Try to clean up common issues
+                                # Replace single quotes with double quotes
+                                entity_text = entity_text.replace("'", "\"")
+                                # Try parsing again
+                                try:
+                                    entities = json.loads(entity_text)
+                                except json.JSONDecodeError:
+                                    # Last resort: create a formatted entities dict
+                                    logger.warning("Failed to parse entity result as JSON after cleanup")
+                                    entities = {"error": "Failed to parse entities", "extracted_text": entity_text}
+                        else:
+                            # If it's not JSON at all, try to parse it as a structured text
+                            logger.info("Entity result doesn't appear to be JSON, trying to parse structured text")
+                            parsed_entities = self._parse_entity_text(entity_text)
+                            if parsed_entities:
+                                entities = parsed_entities
+                            else:
+                                entities = {"unstructured": entity_text.split("\n")}
                     else:
                         entities = entity_text
                 except Exception as e:
                     logger.error(f"Error processing entity result: {str(e)}")
-                    entities = {}
+                    entities = {"error": str(e)}
         
         # Step 4: Generate tags
         tags = []
