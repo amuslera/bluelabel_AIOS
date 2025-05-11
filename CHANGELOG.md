@@ -19,6 +19,10 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
 - Added proper aiohttp timeout configuration for Ollama client
 - Implemented robust task cancellation for orphaned LLM requests
 - Created test script to verify timeout functionality
+- Added comprehensive prompt management system with CLI and web interface
+- Implemented enhanced prompt versioning with diff visualization
+- Added prompt testing capabilities with live LLM integration
+- Created detailed documentation for prompt management system
 
 ## Version History
 
