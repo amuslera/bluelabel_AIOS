@@ -282,9 +282,13 @@ async def health():
     health_status["ok"] = all(health_status.values())
     return health_status
 
-# Include the component API routes
+# Include API routes
 from app.api.routes.components import router as components_router
 app.include_router(components_router)
+
+# Include Gateway API routes
+from app.services.gateway.controller import router as gateway_router
+app.include_router(gateway_router)
 
 # If run directly, start the server
 if __name__ == "__main__":

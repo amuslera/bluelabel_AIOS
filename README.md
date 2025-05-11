@@ -50,7 +50,8 @@ The system consists of these main components:
 3. **Model Router** - Intelligent routing between local and cloud LLMs
 4. **Processing Pipeline** - Content extraction and analysis workflows
 5. **Multi-Component Prompting (MCP)** - Framework for reusable prompt templates
-6. **User Interface** - Streamlit-based interface for agent interaction
+6. **Communication Gateways** - Email and messaging integrations for content submission
+7. **User Interface** - Streamlit-based interface for agent interaction
 
 ### Multi-Component Prompting (MCP) Framework
 
@@ -102,6 +103,52 @@ The MCP framework provides substantial benefits:
 - **Versioning** - Track changes and roll back when needed
 - **Reusability** - Share components across different agents and tasks
 - **Testing** - Evaluate prompt effectiveness with different models
+
+### Communication Gateway Architecture
+
+The system provides multiple channels for content submission through gateway integrations:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                   Communication Gateway System                      │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                 Content Submission Channels                 │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Email       │  │ WhatsApp       │  │ Streamlit UI     │  │    │
+│  │  │ Integration │  │ Integration    │  │ (Direct Upload)  │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                 Content Processing Pipeline                 │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Content     │  │ Type           │  │ Agent            │  │    │
+│  │  │ Extraction  │  │ Detection      │  │ Routing          │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────┐              ┌─────────────────────────┐  │
+│  │                     │              │                         │  │
+│  │  ContentMind        │◄────────────►│     Knowledge           │  │
+│  │  Agent              │              │     Repository          │  │
+│  │                     │              │                         │  │
+│  └─────────────────────┘              └─────────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+Each gateway provides:
+- Automated content submission without requiring UI interaction
+- Content type detection and appropriate processing
+- Notification of processing status to users
+- Flexible configuration via API endpoints
 
 ### Hybrid LLM Architecture
 
@@ -196,6 +243,8 @@ The first agent implementation focuses on knowledge management and content proce
 - Organizes information with automatic tagging and categorization
 - Generates summaries and thematic digests
 - Provides search and retrieval across the knowledge base
+- Supports automated content submission via email and WhatsApp
+- Offers flexible communication gateways for multi-channel input
 
 ### Content Types Supported
 
@@ -269,6 +318,7 @@ The first agent implementation focuses on knowledge management and content proce
 - **Task Queue**: Celery with Redis
 - **Local LLM**: Ollama (running on Mac Mini M4 Pro)
 - **Cloud LLMs**: OpenAI GPT-4, Anthropic Claude
+- **Communication Gateways**: Email (IMAP/SMTP), WhatsApp API
 
 ### Frontend
 - **Framework**: Streamlit
@@ -375,6 +425,14 @@ uvicorn app.main:app --reload
 
 # In a separate terminal, start the Streamlit UI
 streamlit run app/ui/streamlit_app.py
+
+# Configure and start the email gateway (optional)
+# Set up your .env file with email settings first
+curl -X POST http://localhost:8080/gateway/email/start
+
+# Configure and start the WhatsApp gateway (optional)
+# Set up your .env file with WhatsApp API credentials first
+curl -X POST http://localhost:8080/gateway/whatsapp/config -H "Content-Type: application/json" -d '{"phone_id": "your_phone_id", "business_account_id": "your_business_account_id", "api_token": "your_api_token", "verify_token": "your_verify_token", "enabled": true}'
 ```
 
 ## Contributing

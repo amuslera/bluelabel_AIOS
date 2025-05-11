@@ -11,6 +11,10 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
 - Improved entity extraction with better parsing of non-JSON outputs
 - All core endpoints tested and passing
 - Improved maintainability and restart safety
+- Implemented communication gateway framework for automated content submission
+- Added email gateway integration with IMAP/SMTP support
+- Added WhatsApp API integration for messaging-based content submission
+- Created unified API endpoints for managing gateway services
 
 ## Version History
 
