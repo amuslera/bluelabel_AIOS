@@ -51,4 +51,6 @@ Icon
 bluelabel.db
 vector_store/
 *.sqlite
+*.sqlite3
+app/db/vector_db/chroma.sqlite3
 **/.claude/settings.local.json
