@@ -5,6 +5,7 @@ import logging
 import os
 import json
 from datetime import datetime
+from app.core.registry.service_provider import get_component_registry, get_component_tester
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -513,21 +514,65 @@ class ModelRouter:
             }
     
     def _create_system_prompt(self, task: str) -> str:
-        """Create an appropriate system prompt for the task"""
+        """Create an appropriate system prompt for the task
+
+        Attempts to use a system prompt component if available,
+        otherwise falls back to the hardcoded prompts.
+        """
+        # Try to get component from registry
+        component_id = f"system_prompt_{task}"
+        registry = get_component_registry()
+
+        if registry:
+            component = registry.get_component(component_id)
+            if component:
+                try:
+                    # Render the component with empty inputs (system prompts typically don't need inputs)
+                    return component.render({})
+                except Exception as e:
+                    logger.warning(f"Error rendering system prompt component {component_id}: {str(e)}")
+
+        # Fall back to hardcoded prompts
         if task == "summarize":
             return """You are a precise summarization assistant. Your task is to create concise, accurate summaries of content that capture the key points and main message. Focus on the most important information and maintain the original meaning. Be clear, factual, and objective."""
-            
+
         elif task == "extract_entities":
             return """You are an entity extraction assistant. Your task is to identify and categorize key entities mentioned in the content. Focus on people, organizations, products, concepts, and technologies. Format your output as a valid JSON object with categories as keys and arrays of entities as values. Do not include any explanatory text - only output the JSON object."""
-            
+
         elif task == "tag_content":
             return """You are a content tagging assistant. Your task is to generate relevant tags for content that accurately represent the topics, themes, and subjects covered. Create 5-10 tags that would help categorize and discover this content. Return only a comma-separated list of tags without any explanations or additional text."""
-            
+
         else:
             return "You are a helpful assistant that processes content."
-    
+
     def _create_prompt(self, task: str, content: Dict[str, Any]) -> str:
-        """Create a prompt for the LLM based on the task and content"""
+        """Create a prompt for the LLM based on the task and content
+
+        Attempts to use a task component if available,
+        otherwise falls back to the hardcoded prompts.
+        """
+        # Try to get component from registry
+        component_id = f"task_{task}"
+        registry = get_component_registry()
+
+        if registry:
+            component = registry.get_component(component_id)
+            if component:
+                try:
+                    # Prepare inputs for the component
+                    inputs = {"text": content.get("text", "")}
+
+                    # Add any additional inputs from the content
+                    for key, value in content.items():
+                        if key != "text":
+                            inputs[key] = value
+
+                    # Render the component with the inputs
+                    return component.render(inputs)
+                except Exception as e:
+                    logger.warning(f"Error rendering task component {component_id}: {str(e)}")
+
+        # Fall back to hardcoded prompts
         if task == "summarize":
             text = content.get("text", "")
             return f"""Summarize the following content in a concise way that captures the key points:
@@ -535,7 +580,7 @@ class ModelRouter:
 {text}
 
 Summary:"""
-        
+
         elif task == "extract_entities":
             text = content.get("text", "")
             return f"""Extract the key entities from the following content. Focus on people, organizations, products, concepts, and technologies.
@@ -544,7 +589,7 @@ Format the output as a JSON object with categories as keys and arrays of entitie
 {text}
 
 Entities (in JSON format):"""
-        
+
         elif task == "tag_content":
             text = content.get("text", "")
             return f"""Generate appropriate tags for the following content. Tags should be relevant keywords that categorize the content.
@@ -553,7 +598,7 @@ Return a comma-separated list of 5-10 tags.
 {text}
 
 Tags:"""
-        
+
         else:
             return f"Process the following content for task '{task}':\n\n{content.get('text', '')}"
 

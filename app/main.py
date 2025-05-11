@@ -5,13 +5,14 @@ from sqlalchemy.orm import Session
 import logging
 from typing import Dict, Any, List, Optional
 
-from app.core.config_file import settings
+from app.core.config import get_config, settings
 from app.core.model_router.router import ModelRouter
 from app.agents.contentmind.agent import ContentMindAgent
 from app.db.database import get_db, create_tables
 from app.db.vector_store import VectorStore
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.llm.ollama_client import OllamaClient
+from app.core.registry.service_provider import initialize_mcp_system
 
 # Configure logging
 logging.basicConfig(
@@ -31,6 +32,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize MCP system
+try:
+    initialize_mcp_system()
+    logger.info("MCP system initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize MCP system: {str(e)}")
 
 try:
     # Initialize vector store
@@ -279,3 +287,12 @@ async def list_local_models():
             "status": "error",
             "message": f"Error listing local models: {str(e)}"
         }
+
+# Include the component API routes
+from app.api.routes.components import router as components_router
+app.include_router(components_router)
+
+# If run directly, start the server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)

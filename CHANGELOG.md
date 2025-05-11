@@ -126,6 +126,45 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
    - Add LinkedIn post processing
    - Create unified social media interface
 
+---
+
+### v0.6.0 - Multi-Component Prompting Framework
+**Date**: May 11, 2025
+
+**Features**:
+- Comprehensive Multi-Component Prompting (MCP) framework
+- Reusable prompt components with versioning and history tracking
+- Component registry for centralized prompt management
+- Template validation and rendering with variable substitution
+- FastAPI endpoints for component CRUD operations
+- Streamlit UI for component editing and management
+- Integration with ModelRouter for dynamic prompt selection
+- Component testing framework for LLM evaluation
+- Agent integration with task-specific prompt components
+
+**Status**: Advanced prompt management system with component versioning and reuse.
+
+**Issues**:
+- Need to create more domain-specific components
+- Limited component composition (no components within components yet)
+- Missing component performance metrics and analytics
+
+**Next Steps**:
+1. **Component Library Expansion**:
+   - Create specialized components for different domains
+   - Add content-type specific components
+   - Develop structured output components for consistent formatting
+
+2. **Component Composition**:
+   - Enable component nesting and referencing
+   - Implement inheritance and extension mechanisms
+   - Add template fragment reuse across components
+
+3. **Component Analytics**:
+   - Track component usage and performance metrics
+   - Add visualization of component relationships
+   - Create test comparison and optimization tools
+
 ## Current Development Status
 
 The system currently provides:
@@ -134,12 +173,15 @@ The system currently provides:
 - Tag and entity extraction and management
 - Multi-format content browsing and search
 - Hybrid LLM integration (local and cloud)
+- Multi-Component Prompting framework for versioned templates
 
 Key architectural components:
 - Agent framework for modular content processing
 - Vector database for semantic search
 - Structured storage for content relationships
 - Model router for intelligent LLM selection
+- Component registry for prompt management
+- Versioning system for prompt history tracking
 
 ## Known Issues
 

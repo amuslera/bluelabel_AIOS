@@ -9,6 +9,7 @@ from app.processors.url.extractor import URLProcessor
 from app.processors.pdf.processor import PDFProcessor
 from app.processors.audio.processor import AudioProcessor
 from app.processors.text.processor import TextProcessor
+from app.processors.social.processor import SocialMediaProcessor
 from app.core.model_router.router import ModelRouter, Provider
 
 # Configure logging
@@ -108,6 +109,26 @@ class TextProcessorTool(AgentTool):
         """
         logger.info(f"Processing text content")
         return await self.processor.extract(text_content, metadata)
+
+
+class SocialMediaProcessorTool(AgentTool):
+    """Tool for processing social media content"""
+
+    def __init__(self):
+        super().__init__(
+            name="social_processor",
+            description="Processes social media content (Twitter/X, LinkedIn, Reddit, etc.)"
+        )
+        self.processor = SocialMediaProcessor()
+
+    async def execute(self, social_url: str, **kwargs) -> Dict[str, Any]:
+        """Process social media content
+
+        Args:
+            social_url: URL of social media post or content ID
+        """
+        logger.info(f"Processing social media content: {social_url}")
+        return await self.processor.extract(social_url)
 
 
 class SummarizerTool(AgentTool):
@@ -244,7 +265,7 @@ class ContentMindAgent(BluelabelAgent):
     def __init__(self, config: Dict[str, Any], model_router: ModelRouter):
         self.model_router = model_router
         super().__init__(config)
-    
+
     def _register_tools(self) -> List[AgentTool]:
         """Register tools available to this agent"""
         return [
@@ -252,10 +273,24 @@ class ContentMindAgent(BluelabelAgent):
             PDFProcessorTool(),
             AudioProcessorTool(),
             TextProcessorTool(),
+            SocialMediaProcessorTool(),
             SummarizerTool(self.model_router),
             EntityExtractorTool(self.model_router),
             TaggerTool(self.model_router)
         ]
+
+    def _register_components(self) -> Dict[str, str]:
+        """Register MCP components for ContentMind agent tasks"""
+        return {
+            "summarize_content": "agent_contentmind_summarize",
+            "extract_entities": "agent_contentmind_extract_entities",
+            "tag_content": "agent_contentmind_tag_content",
+            "process_url": "agent_contentmind_process_url",
+            "process_pdf": "agent_contentmind_process_pdf",
+            "process_audio": "agent_contentmind_process_audio",
+            "process_text": "agent_contentmind_process_text",
+            "process_social": "agent_contentmind_process_social"
+        }
     
     async def process(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process content with ContentMind agent"""
@@ -295,7 +330,7 @@ class ContentMindAgent(BluelabelAgent):
                 return {"status": "error", "message": "PDF processor tool not available"}
 
             extracted = await pdf_tool.execute(pdf_content=content)
-            
+
         elif content_type == "audio":
             # Process audio content
             audio_tool = next((t for t in self.tools if t.name == "audio_processor"), None)
@@ -314,6 +349,25 @@ class ContentMindAgent(BluelabelAgent):
             metadata = request.get("metadata", {})
 
             extracted = await text_tool.execute(text_content=content, metadata=metadata)
+
+        elif content_type == "social":
+            # Process social media content
+            social_tool = next((t for t in self.tools if t.name == "social_processor"), None)
+            if not social_tool:
+                return {"status": "error", "message": "Social media processor tool not available"}
+
+            # Check if this is a thread by looking for multiple URLs
+            is_thread = "\n" in content and len([u for u in content.split("\n") if u.strip()]) > 1
+
+            # Get metadata if provided
+            metadata = request.get("metadata", {})
+            if is_thread:
+                # Set thread flag for display purposes
+                if not metadata:
+                    metadata = {}
+                metadata["is_thread"] = True
+
+            extracted = await social_tool.execute(social_url=content)
 
         # Stop here if extraction failed or content type not supported
         if not extracted or extracted.get("status") != "success":

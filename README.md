@@ -49,7 +49,59 @@ The system consists of these main components:
 2. **Knowledge Repository** - Structured storage for processed information
 3. **Model Router** - Intelligent routing between local and cloud LLMs
 4. **Processing Pipeline** - Content extraction and analysis workflows
-5. **User Interface** - Streamlit-based interface for agent interaction
+5. **Multi-Component Prompting (MCP)** - Framework for reusable prompt templates
+6. **User Interface** - Streamlit-based interface for agent interaction
+
+### Multi-Component Prompting (MCP) Framework
+
+The MCP framework provides a robust system for creating, managing, and versioning prompt templates:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Multi-Component Prompting Framework              │
+│                                                                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
+│  │                 │    │                 │    │                 │  │
+│  │  Component      │    │   Registry &    │    │  Versioning &   │  │
+│  │  Management     │    │   Storage       │    │  History        │  │
+│  │                 │    │                 │    │                 │  │
+│  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘  │
+│           │                      │                      │           │
+│           ▼                      ▼                      ▼           │
+│                                                                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
+│  │                 │    │                 │    │                 │  │
+│  │  Template       │    │   Testing &     │    │  API & UI       │  │
+│  │  Rendering      │    │   Evaluation    │    │  Integration    │  │
+│  │                 │    │                 │    │                 │  │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘  │
+│                                                                     │
+└──────────────────────────────────┬──────────────────────────────────┘
+                                   │
+            ┌────────────────────┬─┴───────────────────┐
+            │                    │                     │
+            ▼                    ▼                     ▼
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│                     │ │                     │ │                     │
+│ Agent-Specific      │ │ System Prompts      │ │ Task-Specific       │
+│ Components          │ │                     │ │ Components          │
+│                     │ │                     │ │                     │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+```
+
+- **Component Management** - Creation, editing, and organization of prompt components
+- **Registry & Storage** - Centralized storage with JSON persistence
+- **Versioning & History** - Track changes and compare versions over time
+- **Template Rendering** - Variable substitution with required/optional inputs
+- **Testing & Evaluation** - Evaluate components with different LLM providers
+- **API & UI Integration** - FastAPI endpoints and Streamlit interface
+
+The MCP framework provides substantial benefits:
+- **Consistency** - Standard prompts across the application
+- **Maintainability** - Central management of prompt templates
+- **Versioning** - Track changes and roll back when needed
+- **Reusability** - Share components across different agents and tasks
+- **Testing** - Evaluate prompt effectiveness with different models
 
 ### Hybrid LLM Architecture
 
@@ -209,7 +261,8 @@ The first agent implementation focuses on knowledge management and content proce
 
 ### Backend
 - **Framework**: FastAPI
-- **Agent Framework**: LangChain with custom agent architecture
+- **Agent Framework**: Custom agent architecture with modular components
+- **Prompt Framework**: Multi-Component Prompting (MCP) with versioning
 - **Database**: PostgreSQL (production), SQLite (development)
 - **Vector Store**: ChromaDB (development), Pinecone (optional for production)
 - **Content Processing**: Trafilatura, PyPDF2, Whisper (audio)
@@ -219,6 +272,7 @@ The first agent implementation focuses on knowledge management and content proce
 
 ### Frontend
 - **Framework**: Streamlit
+- **Component UI**: Custom Streamlit-based editor and library for MCP
 - **Visualization**: Plotly, Altair
 - **Styling**: Streamlit components + custom CSS
 
@@ -258,7 +312,16 @@ The first agent implementation focuses on knowledge management and content proce
 - Agent configuration
 - Visualization components
 
-### Phase 5: Deployment & Remote Access (Weeks 9-10)
+### Phase 5: Multi-Component Prompting (Weeks 9-10)
+- Core component system implementation
+- Component registry and persistence
+- Versioning and history tracking
+- Template validation and rendering
+- Testing framework integration
+- Component editor UI
+- Agent integration with components
+
+### Phase 6: Deployment & Remote Access (Weeks 11-12)
 - Mac Mini setup and configuration
 - Ollama installation and optimization
 - Remote access configuration
