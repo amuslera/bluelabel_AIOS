@@ -2,6 +2,12 @@
 
 This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
 
+## [Unreleased]
+- Robust upsert logic for MCP system and agent components (no duplicate ID errors)
+- Fixed config import and ModelRouter initialization
+- All core endpoints tested and passing
+- Improved maintainability and restart safety
+
 ## Version History
 
 ### v0.1.0 - Initial Setup (commit: 5950f80)
