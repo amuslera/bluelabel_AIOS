@@ -61,9 +61,9 @@ def get_model_router() -> ModelRouter:
     
     if _model_router is None:
         from app.core.model_router.router import ModelRouter
-        
-        # Initialize router
-        _model_router = ModelRouter()
+        from app.core.config import get_config
+        config = get_config()
+        _model_router = ModelRouter(config.get("llm", {}))
     
     return _model_router
 
@@ -143,84 +143,71 @@ def _load_example_components() -> None:
 def _load_system_components() -> None:
     """Load system components used by the ModelRouter."""
     editor = get_component_editor()
-    
+    registry = get_component_registry()
+
+    def upsert_component(id, **kwargs):
+        if registry.get_component(id) is not None:
+            editor.update_component(
+                component_id=id,
+                name=kwargs.get("name"),
+                description=kwargs.get("description"),
+                template=kwargs.get("template"),
+                tags=kwargs.get("tags"),
+                metadata=kwargs.get("metadata"),
+                increment_version=False
+            )
+        else:
+            editor.create_component(id=id, **kwargs)
+
     # System prompt components
-    editor.create_component(
+    upsert_component(
+        id="system_prompt_summarize",
         name="Summarization System Prompt",
         description="System prompt for summarization tasks",
         template="You are a precise summarization assistant. Your task is to create concise, accurate summaries of content that capture the key points and main message. Focus on the most important information and maintain the original meaning. Be clear, factual, and objective.",
         tags=["system", "summarization"],
-        metadata={
-            "system": True,
-        },
-        # Use a fixed ID for system components
-        id="system_prompt_summarize"
+        metadata={"system": True}
     )
-    
-    editor.create_component(
+    upsert_component(
+        id="system_prompt_extract_entities",
         name="Entity Extraction System Prompt",
         description="System prompt for entity extraction tasks",
         template="You are an entity extraction assistant. Your task is to identify and categorize key entities mentioned in the content. Focus on people, organizations, products, concepts, and technologies. Format your output as a valid JSON object with categories as keys and arrays of entities as values. Do not include any explanatory text - only output the JSON object.",
         tags=["system", "entity-extraction"],
-        metadata={
-            "system": True,
-        },
-        id="system_prompt_extract_entities"
+        metadata={"system": True}
     )
-    
-    editor.create_component(
+    upsert_component(
+        id="system_prompt_tag_content",
         name="Content Tagging System Prompt",
         description="System prompt for content tagging tasks",
         template="You are a content tagging assistant. Your task is to generate relevant tags for content that accurately represent the topics, themes, and subjects covered. Create 5-10 tags that would help categorize and discover this content. Return only a comma-separated list of tags without any explanations or additional text.",
         tags=["system", "tagging"],
-        metadata={
-            "system": True,
-        },
-        id="system_prompt_tag_content"
+        metadata={"system": True}
     )
-    
     # Task prompt components
-    editor.create_component(
+    upsert_component(
+        id="task_summarize",
         name="Summarization Task",
         description="Task prompt for summarization",
         template="Summarize the following content in a concise way that captures the key points:\n\n{text}\n\nSummary:",
         tags=["task", "summarization"],
-        metadata={
-            "system": True,
-            "expected_inputs": {
-                "text": "The content to summarize"
-            }
-        },
-        id="task_summarize"
+        metadata={"system": True, "expected_inputs": {"text": "The content to summarize"}}
     )
-    
-    editor.create_component(
+    upsert_component(
+        id="task_extract_entities",
         name="Entity Extraction Task",
         description="Task prompt for entity extraction",
         template="Extract the key entities from the following content. Focus on people, organizations, products, concepts, and technologies.\nFormat the output as a JSON object with categories as keys and arrays of entities as values.\n\n{text}\n\nEntities (in JSON format):",
         tags=["task", "entity-extraction"],
-        metadata={
-            "system": True,
-            "expected_inputs": {
-                "text": "The content to extract entities from"
-            },
-            "output_format": "JSON"
-        },
-        id="task_extract_entities"
+        metadata={"system": True, "expected_inputs": {"text": "The content to extract entities from"}, "output_format": "JSON"}
     )
-    
-    editor.create_component(
+    upsert_component(
+        id="task_tag_content",
         name="Content Tagging Task",
         description="Task prompt for content tagging",
         template="Generate appropriate tags for the following content. Tags should be relevant keywords that categorize the content.\nReturn a comma-separated list of 5-10 tags.\n\n{text}\n\nTags:",
         tags=["task", "tagging"],
-        metadata={
-            "system": True,
-            "expected_inputs": {
-                "text": "The content to tag"
-            }
-        },
-        id="task_tag_content"
+        metadata={"system": True, "expected_inputs": {"text": "The content to tag"}}
     )
 
 def _load_agent_components() -> None:
@@ -232,107 +219,82 @@ def _load_agent_components() -> None:
 
 def _load_contentmind_components(editor: ComponentEditor) -> None:
     """Load components used by the ContentMind agent."""
-    # ContentMind summarization component
-    editor.create_component(
+    registry = get_component_registry()
+    def upsert_component(id, **kwargs):
+        if registry.get_component(id) is not None:
+            editor.update_component(
+                component_id=id,
+                name=kwargs.get("name"),
+                description=kwargs.get("description"),
+                template=kwargs.get("template"),
+                tags=kwargs.get("tags"),
+                metadata=kwargs.get("metadata"),
+                increment_version=False
+            )
+        else:
+            editor.create_component(id=id, **kwargs)
+
+    upsert_component(
+        id="agent_contentmind_summarize",
         name="ContentMind Summarization",
         description="Summarizes content for the ContentMind agent",
         template="You are the ContentMind agent, tasked with summarizing content to extract key information.\n\nPlease provide a concise summary that captures the main points, key facts, and core message of the content. Focus on extracting the most valuable information that would be useful to the user.\n\nContent to summarize:\n{text}\n\nSummary:",
         tags=["agent", "contentmind", "summarization"],
-        metadata={
-            "agent": "contentmind",
-            "task": "summarize_content"
-        },
-        id="agent_contentmind_summarize"
+        metadata={"agent": "contentmind", "task": "summarize_content"}
     )
-    
-    # ContentMind entity extraction component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_extract_entities",
         name="ContentMind Entity Extraction",
         description="Extracts entities for the ContentMind agent",
         template="You are the ContentMind agent, tasked with extracting entities from content.\n\nIdentify and categorize key entities mentioned in this content. Focus on people, organizations, products, concepts, locations, and technologies. Format your output as a valid JSON object with categories as keys and arrays of entities as values.\n\nContent for entity extraction:\n{text}\n\nEntities (in JSON format):",
         tags=["agent", "contentmind", "entity-extraction"],
-        metadata={
-            "agent": "contentmind",
-            "task": "extract_entities",
-            "output_format": "JSON"
-        },
-        id="agent_contentmind_extract_entities"
+        metadata={"agent": "contentmind", "task": "extract_entities", "output_format": "JSON"}
     )
-    
-    # ContentMind content tagging component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_tag_content",
         name="ContentMind Content Tagging",
         description="Tags content for the ContentMind agent",
         template="You are the ContentMind agent, tasked with generating relevant tags for content.\n\nCreate 5-10 tags that accurately represent the topics, themes, and subjects covered in this content. These tags will be used for organization, categorization, and discovery of this content in the knowledge repository.\n\nContent to tag:\n{text}\n\nTags (comma-separated):",
         tags=["agent", "contentmind", "tagging"],
-        metadata={
-            "agent": "contentmind",
-            "task": "tag_content"
-        },
-        id="agent_contentmind_tag_content"
+        metadata={"agent": "contentmind", "task": "tag_content"}
     )
-    
-    # ContentMind URL processing component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_process_url",
         name="ContentMind URL Processing",
         description="Processes URLs for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from a URL.\n\nExtract the key information from this web content, focusing on the main text while ignoring navigation, advertisements, and other non-essential elements.\n\nURL content:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "url-processing"],
-        metadata={
-            "agent": "contentmind",
-            "task": "process_url"
-        },
-        id="agent_contentmind_process_url"
+        metadata={"agent": "contentmind", "task": "process_url"}
     )
-    
-    # ContentMind PDF processing component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_process_pdf",
         name="ContentMind PDF Processing",
         description="Processes PDFs for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from a PDF document.\n\nExtract the key information from this PDF content, organizing it in a way that preserves the document's structure while highlighting the most important information.\n\nPDF content:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "pdf-processing"],
-        metadata={
-            "agent": "contentmind",
-            "task": "process_pdf"
-        },
-        id="agent_contentmind_process_pdf"
+        metadata={"agent": "contentmind", "task": "process_pdf"}
     )
-    
-    # ContentMind audio processing component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_process_audio",
         name="ContentMind Audio Processing",
         description="Processes audio transcriptions for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from an audio transcription.\n\nExamine this transcription and organize the content in a structured format. Identify speakers if possible, and focus on extracting the key points and main message.\n\nTranscription:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "audio-processing"],
-        metadata={
-            "agent": "contentmind",
-            "task": "process_audio"
-        },
-        id="agent_contentmind_process_audio"
+        metadata={"agent": "contentmind", "task": "process_audio"}
     )
-    
-    # ContentMind text processing component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_process_text",
         name="ContentMind Text Processing",
         description="Processes text for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing raw text content.\n\nOrganize and structure this text to extract the core information and present it in a clear, concise format.\n\nRaw text:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "text-processing"],
-        metadata={
-            "agent": "contentmind",
-            "task": "process_text"
-        },
-        id="agent_contentmind_process_text"
+        metadata={"agent": "contentmind", "task": "process_text"}
     )
-    
-    # ContentMind social media processing component
-    editor.create_component(
+    upsert_component(
+        id="agent_contentmind_process_social",
         name="ContentMind Social Media Processing",
         description="Processes social media content for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from social media.\n\nAnalyze this social media content and extract the key information, including the main message, topic, sentiment, and any relevant context. For threads, maintain the conversation flow while highlighting the most important points.\n\nSocial media content:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "social-media-processing"],
-        metadata={
-            "agent": "contentmind",
-            "task": "process_social"
-        },
-        id="agent_contentmind_process_social"
+        metadata={"agent": "contentmind", "task": "process_social"}
     )

@@ -29,11 +29,6 @@ async def get_registry() -> ComponentRegistry:
 async def get_editor(registry: ComponentRegistry = Depends(get_registry)) -> ComponentEditor:
     return ComponentEditor(registry)
 
-# Dependency for getting the component tester
-async def get_tester(registry: ComponentRegistry = Depends(get_registry),
-                    model_router: ModelRouter = Depends(get_model_router)) -> ComponentTester:
-    return ComponentTester(registry, model_router)
-
 # Dependency for getting the model router
 async def get_model_router() -> ModelRouter:
     # Get the model router from the service provider
@@ -45,6 +40,11 @@ async def get_model_router() -> ModelRouter:
             detail="Model router is not available. LLM testing features will not work."
         )
     return router
+
+# Dependency for getting the component tester
+async def get_tester(registry: ComponentRegistry = Depends(get_registry),
+                    model_router: ModelRouter = Depends(get_model_router)) -> ComponentTester:
+    return ComponentTester(registry, model_router)
 
 @router.get("/", response_model=List[Dict[str, Any]])
 async def list_components(

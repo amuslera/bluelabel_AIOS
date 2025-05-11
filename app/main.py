@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import logging
 from typing import Dict, Any, List, Optional
 
-from app.core.config import get_config, settings
+from app.core.config import settings
 from app.core.model_router.router import ModelRouter
 from app.agents.contentmind.agent import ContentMindAgent
 from app.db.database import get_db, create_tables
@@ -54,7 +54,7 @@ try:
     model_router = ModelRouter({
         "LOCAL_LLM_ENABLED": settings.LOCAL_LLM_ENABLED,
         "LOCAL_LLM_HOST": settings.LOCAL_LLM_HOST,
-        "LOCAL_LLM_MODEL": "llama3"
+        "LOCAL_LLM_MODEL": settings.LOCAL_LLM_MODEL
     })
     logger.info("Model router initialized successfully")
 except Exception as e:
@@ -84,6 +84,21 @@ def get_knowledge_service(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail="Vector store is not available")
     return KnowledgeService(db, vector_store)
 
+# Helper function for processing and storing content
+async def process_and_store_content(agent, request, knowledge_service, logger):
+    result = await agent.process(request)
+    if result.get("status") != "success":
+        return result
+    content_type = request.get("content_type")
+    processed_content = result.get("processed_content", {})
+    storage_result = await knowledge_service.store_content(processed_content, content_type)
+    result["storage"] = {
+        "stored": storage_result.get("status") == "success",
+        "content_id": storage_result.get("content_id"),
+        "error": storage_result.get("message") if storage_result.get("status") != "success" else None
+    }
+    return result
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Bluelabel AIOS API"}
@@ -96,34 +111,8 @@ async def process_content(
     """Process content with ContentMind agent and store in knowledge repository"""
     if not content_mind:
         raise HTTPException(status_code=503, detail="ContentMind agent is not available")
-
     try:
-        # Process the content with ContentMind
-        result = await content_mind.process(request)
-
-        if result.get("status") != "success":
-            return result
-
-        # Store the processed content in the knowledge repository
-        content_type = request.get("content_type")
-        processed_content = result.get("processed_content", {})
-
-        # Store the content
-        storage_result = await knowledge_service.store_content(processed_content, content_type)
-
-        # Add the storage information to the result
-        if storage_result.get("status") == "success":
-            result["storage"] = {
-                "stored": True,
-                "content_id": storage_result.get("content_id")
-            }
-        else:
-            result["storage"] = {
-                "stored": False,
-                "error": storage_result.get("message")
-            }
-
-        return result
+        return await process_and_store_content(content_mind, request, knowledge_service, logger)
     except Exception as e:
         logger.error(f"Error processing content: {str(e)}")
         return {
@@ -138,37 +127,9 @@ async def test_process(
 ):
     """Process content with test agent that bypasses LLM calls"""
     from app.test_agent import TestAgent
-
     try:
-        # Initialize test agent
         test_agent = TestAgent()
-
-        # Process the content with test agent
-        result = await test_agent.process(request)
-
-        if result.get("status") != "success":
-            return result
-
-        # Store the processed content in the knowledge repository
-        content_type = request.get("content_type")
-        processed_content = result.get("processed_content", {})
-
-        # Store the content
-        storage_result = await knowledge_service.store_content(processed_content, content_type)
-
-        # Add the storage information to the result
-        if storage_result.get("status") == "success":
-            result["storage"] = {
-                "stored": True,
-                "content_id": storage_result.get("content_id")
-            }
-        else:
-            result["storage"] = {
-                "stored": False,
-                "error": storage_result.get("message")
-            }
-
-        return result
+        return await process_and_store_content(test_agent, request, knowledge_service, logger)
     except Exception as e:
         logger.error(f"Error in test processing: {str(e)}")
         return {
@@ -263,9 +224,13 @@ async def test_local_llm():
 async def test_local_model_pull(request: Dict[str, Any]):
     """Pull a specific model from Ollama"""
     try:
-        model = request.get("model", "llama3")
+        model = request.get("model", settings.LOCAL_LLM_MODEL)
         ollama_client = OllamaClient()
         result = await ollama_client.pull_model(model)
+        # Ensure error messages are meaningful
+        if result.get("status") != "success":
+            if not result.get("message"):
+                result["message"] = f"Failed to pull model: {model} (unknown error)"
         return result
     except Exception as e:
         logger.error(f"Error pulling model: {str(e)}")
@@ -280,13 +245,39 @@ async def list_local_models():
     try:
         ollama_client = OllamaClient()
         result = await ollama_client.list_models()
-        return result
+        # Normalize output: always return a list of model names
+        if isinstance(result, dict) and "models" in result:
+            model_names = [m["name"] for m in result["models"] if isinstance(m, dict) and "name" in m]
+            return {"models": model_names}
+        else:
+            return {"models": []}
     except Exception as e:
         logger.error(f"Error listing local models: {str(e)}")
         return {
             "status": "error",
             "message": f"Error listing local models: {str(e)}"
         }
+
+@app.get("/health")
+async def health():
+    """Health check for all major components"""
+    health_status = {}
+    # Vector store
+    health_status["vector_store"] = vector_store is not None
+    # Model router
+    health_status["model_router"] = model_router is not None
+    # ContentMind agent
+    health_status["content_mind"] = content_mind is not None
+    # Local LLM
+    try:
+        ollama_client = OllamaClient()
+        local_llm_ok = await ollama_client.is_available()
+    except Exception:
+        local_llm_ok = False
+    health_status["local_llm"] = local_llm_ok
+    # Overall
+    health_status["ok"] = all(health_status.values())
+    return health_status
 
 # Include the component API routes
 from app.api.routes.components import router as components_router

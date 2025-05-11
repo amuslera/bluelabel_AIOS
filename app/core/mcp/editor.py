@@ -37,7 +37,8 @@ class ComponentEditor:
                          description: str, 
                          template: str,
                          tags: Optional[List[str]] = None,
-                         metadata: Optional[Dict[str, Any]] = None) -> MCPComponent:
+                         metadata: Optional[Dict[str, Any]] = None,
+                         id: Optional[str] = None) -> MCPComponent:
         """Create a new component.
         
         Args:
@@ -46,6 +47,7 @@ class ComponentEditor:
             template: The prompt template text with placeholders.
             tags: Optional list of tags for categorizing the component.
             metadata: Optional additional metadata for the component.
+            id: Optional fixed ID for the component.
             
         Returns:
             The newly created component.
@@ -56,7 +58,8 @@ class ComponentEditor:
             description=description,
             template=template,
             tags=tags or [],
-            metadata=metadata or {}
+            metadata=metadata or {},
+            id=id
         )
         
         # Register the component

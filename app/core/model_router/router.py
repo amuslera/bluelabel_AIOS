@@ -5,7 +5,6 @@ import logging
 import os
 import json
 from datetime import datetime
-from app.core.registry.service_provider import get_component_registry, get_component_tester
 
 # Configure logging
 logger = logging.getLogger(__name__)
