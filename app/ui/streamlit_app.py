@@ -25,14 +25,16 @@ CONTENT_TYPE_ICONS = {
     "url": "🔗",
     "pdf": "📄",
     "text": "📝",
-    "audio": "🔊"
+    "audio": "🔊",
+    "social": "📱"
 }
 
 CONTENT_TYPE_COLORS = {
     "url": "#c2e0f4",    # Light blue
     "pdf": "#f5d5cb",    # Light coral
     "text": "#d5f5d5",   # Light green
-    "audio": "#e6d9f2"   # Light purple
+    "audio": "#e6d9f2",  # Light purple
+    "social": "#fce8c5"  # Light orange
 }
 
 # Cache for tag suggestions
@@ -113,15 +115,44 @@ def main():
         
     # Sidebar
     st.sidebar.header("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Page",
-        ["Process Content", "View Knowledge", "Search", "Settings", "Dashboard"],
-        index=["Process Content", "View Knowledge", "Search", "Settings", "Dashboard"].index(st.session_state.page)
+
+    # Group pages into categories
+    st.sidebar.subheader("Content Management")
+    content_page = st.sidebar.radio(
+        "Content",
+        ["Process Content", "View Knowledge", "Search"],
+        index=["Process Content", "View Knowledge", "Search"].index(st.session_state.page)
+            if st.session_state.page in ["Process Content", "View Knowledge", "Search"] else 0
     )
-    
+
+    st.sidebar.subheader("Prompt Management")
+    prompt_page = st.sidebar.radio(
+        "Prompts",
+        ["Component Editor", "Component Library"],
+        index=["Component Editor", "Component Library"].index(st.session_state.page)
+            if st.session_state.page in ["Component Editor", "Component Library"] else 0
+    )
+
+    st.sidebar.subheader("System")
+    system_page = st.sidebar.radio(
+        "System",
+        ["Dashboard", "Settings"],
+        index=["Dashboard", "Settings"].index(st.session_state.page)
+            if st.session_state.page in ["Dashboard", "Settings"] else 0
+    )
+
+    # Determine selected page
+    if content_page in ["Process Content", "View Knowledge", "Search"]:
+        page = content_page
+    elif prompt_page in ["Component Editor", "Component Library"]:
+        page = prompt_page
+    else:
+        page = system_page
+
     # Update session state
     st.session_state.page = page
-    
+
+    # Render the selected page
     if page == "Process Content":
         process_content_page()
     elif page == "View Knowledge":
@@ -132,6 +163,12 @@ def main():
         settings_page()
     elif page == "Dashboard":
         dashboard_page()
+    elif page == "Component Editor":
+        from app.ui.pages.component_editor import render_component_editor_page
+        render_component_editor_page()
+    elif page == "Component Library":
+        from app.ui.pages.component_library import render_component_library_page
+        render_component_library_page()
 
 def update_content_type():
     """Updates session state when content type changes"""
@@ -185,8 +222,8 @@ def process_content_page():
     # Content type selector OUTSIDE the form for immediate refresh
     st.selectbox(
         "Content Type",
-        ["url", "text", "pdf", "audio"],
-        index=["url", "text", "pdf", "audio"].index(st.session_state.content_type),
+        ["url", "text", "pdf", "audio", "social"],
+        index=["url", "text", "pdf", "audio", "social"].index(st.session_state.content_type) if st.session_state.content_type in ["url", "text", "pdf", "audio", "social"] else 0,
         key="content_type_selector",
         on_change=update_content_type
     )
@@ -259,9 +296,75 @@ def process_content_page():
                 content = f"data:{mime_type};base64,{b64_audio}"
                 st.success(f"Uploaded: {uploaded_file.name}")
                 st.audio(uploaded_file, format=f"audio/{mime_type}")
-                
+
+        elif content_type == "social":
+            # Social media input
+            platform = st.selectbox(
+                "Social Media Platform",
+                ["Twitter/X", "LinkedIn", "Reddit", "Instagram", "Facebook", "Other"],
+                index=0
+            )
+
+            # Thread mode toggle
+            is_thread = st.checkbox("This is a thread (multiple posts)", value=False)
+
+            if is_thread:
+                # Thread collection mode
+                st.markdown("##### Thread Collection Mode")
+                st.info("Add URLs in order (first post at the top)")
+
+                # Initialize thread URLs in session state if not exists
+                if 'thread_urls' not in st.session_state:
+                    st.session_state.thread_urls = [""]
+
+                # Display all thread URL inputs
+                thread_urls = []
+                for i, url in enumerate(st.session_state.thread_urls):
+                    col1, col2 = st.columns([10, 1])
+                    with col1:
+                        thread_url = st.text_input(f"Post {i+1}",
+                                                 value=url,
+                                                 key=f"thread_url_{i}")
+                        thread_urls.append(thread_url)
+                    with col2:
+                        if i > 0 and st.button("✕", key=f"remove_{i}"):
+                            # Mark for removal
+                            thread_urls[i] = ""
+
+                # Remove empty URLs (except first one)
+                thread_urls = [url for i, url in enumerate(thread_urls) if url or i == 0]
+
+                # Add button for new URL
+                if st.button("+ Add post to thread"):
+                    thread_urls.append("")
+
+                # Update session state
+                st.session_state.thread_urls = thread_urls
+
+                # Combine all URLs for processing
+                content = "\n".join(thread_urls)
+
+                # Add thread info text
+                st.text(f"Thread contains {len([u for u in thread_urls if u])} posts")
+            else:
+                # Single post mode
+                content = st.text_input("Social Media URL", "https://twitter.com/example/status/1234567890")
+
+            # Optional metadata for social media
+            with st.expander("Social Media Metadata (Optional)", expanded=False):
+                include_comments = st.checkbox("Include comments/replies (when available)", value=True)
+                extract_user = st.checkbox("Extract user information", value=True)
+
+                # Platform-specific options
+                if platform == "Twitter/X":
+                    st.info("Include hashtags and mentions from tweet")
+                    if is_thread:
+                        st.info("Thread mode will combine all posts into a single document")
+                elif platform == "Reddit":
+                    include_subreddit = st.checkbox("Include subreddit information", value=True)
+
         # Optional tags for all content types
-        suggested_tags = st.text_input("Suggested Tags (comma separated)", 
+        suggested_tags = st.text_input("Suggested Tags (comma separated)",
                                       help="Optional tags to suggest for the content. The AI will use these as hints.")
         
         submitted = st.form_submit_button("Process Content")
@@ -291,7 +394,29 @@ def process_content_page():
                     # Add metadata for text content if provided
                     if content_type == "text" and text_metadata:
                         api_json["metadata"] = text_metadata
-                    
+
+                    # Add metadata for social media content
+                    if content_type == "social":
+                        social_metadata = {}
+
+                        # Get platform from UI and map to processor format
+                        selected_platform = platform.lower().split("/")[0]  # Handle "Twitter/X" -> "twitter"
+                        social_metadata["platform"] = selected_platform
+
+                        # Add platform-specific options
+                        if include_comments:
+                            social_metadata["include_comments"] = True
+
+                        if extract_user:
+                            social_metadata["extract_user"] = True
+
+                        # Reddit-specific options
+                        if selected_platform == "reddit" and locals().get("include_subreddit"):
+                            social_metadata["include_subreddit"] = True
+
+                        # Add metadata to API request
+                        api_json["metadata"] = social_metadata
+
                     # Add suggested tags if provided
                     if suggested_tags:
                         tags_list = [tag.strip() for tag in suggested_tags.split(",") if tag.strip()]
@@ -389,6 +514,37 @@ def display_processing_result(result):
                 st.markdown(f"**Duration:** {processed.get('duration')}")
                 if processed.get("language"):
                     st.markdown(f"**Language:** {processed.get('language').title()}")
+            elif content_type == "social":
+                metadata = processed.get('metadata', {})
+                # Get platform from metadata
+                platform = metadata.get('platform', '').title()
+                if platform:
+                    st.markdown(f"**Platform:** {platform}")
+
+                # Show thread info if available
+                if metadata.get('is_thread') or metadata.get('thread_length'):
+                    thread_length = metadata.get('thread_length', 0)
+                    if thread_length > 0:
+                        st.markdown(f"**Thread:** {thread_length} posts")
+                    else:
+                        st.markdown("**Thread:** Multiple posts")
+
+                # Show hashtags for Twitter
+                if platform.lower() == 'twitter' and metadata.get('hashtags'):
+                    hashtags = metadata.get('hashtags', [])
+                    if hashtags:
+                        st.markdown(f"**Hashtags:** {', '.join(['#' + tag for tag in hashtags])}")
+
+                # Show mentions for Twitter
+                if platform.lower() == 'twitter' and metadata.get('mentions'):
+                    mentions = metadata.get('mentions', [])
+                    if mentions:
+                        st.markdown(f"**Mentions:** {', '.join(['@' + user for user in mentions])}")
+
+                # Show subreddit for Reddit
+                if platform.lower() == 'reddit' and metadata.get('subreddit'):
+                    subreddit = metadata.get('subreddit')
+                    st.markdown(f"**Subreddit:** r/{subreddit}")
 
             # Author and date if available
             if processed.get("author") or processed.get("published_date"):
@@ -525,9 +681,9 @@ def view_knowledge_page():
                 # Content type filter
                 content_type = st.selectbox(
                     "Content Type",
-                    ["All", "url", "pdf", "audio", "text"]
+                    ["All", "url", "pdf", "audio", "text", "social"]
                 )
-                
+
                 # Date range filter
                 date_filter = st.selectbox(
                     "Date Filter",
@@ -802,13 +958,32 @@ def display_content_details(content_id):
                             metadata = content.get("metadata")
                             if metadata.get("page_count"):
                                 st.markdown(f"**Pages:** {metadata.get('page_count')}")
-                                
+
                         elif content_type == "audio" and content.get("metadata"):
                             metadata = content.get("metadata")
                             if metadata.get("duration"):
                                 st.markdown(f"**Duration:** {metadata.get('duration')}")
                             if metadata.get("language"):
                                 st.markdown(f"**Language:** {metadata.get('language').title()}")
+
+                        elif content_type == "social" and content.get("metadata"):
+                            metadata = content.get("metadata")
+                            platform = metadata.get("platform", "").title()
+                            if platform:
+                                st.markdown(f"**Platform:** {platform}")
+
+                            # Show specific platform info
+                            if platform.lower() == "twitter":
+                                if metadata.get("hashtags"):
+                                    hashtags = metadata.get("hashtags", [])
+                                    st.markdown(f"**Hashtags:** {', '.join(['#' + tag for tag in hashtags])}")
+
+                                if metadata.get("mentions"):
+                                    mentions = metadata.get("mentions", [])
+                                    st.markdown(f"**Mentions:** {', '.join(['@' + user for user in mentions])}")
+
+                            elif platform.lower() == "reddit" and metadata.get("subreddit"):
+                                st.markdown(f"**Subreddit:** r/{metadata.get('subreddit')}")
                     
                     with col2:
                         # Timestamps
@@ -867,7 +1042,66 @@ def display_content_details(content_id):
                     elif content_type == "audio":
                         st.markdown(content.get("full_text", "No transcription available"))
                         st.write("This is a transcription of the audio content.")
-                        
+
+                    elif content_type == "social":
+                        st.markdown(content.get("full_text", "No full text available"))
+
+                        # Display platform-specific info
+                        metadata = content.get("metadata", {})
+                        platform = metadata.get("platform", "").lower()
+
+                        # Check if this is a thread
+                        is_thread = metadata.get("is_thread") or metadata.get("thread_length", 0) > 0
+
+                        if platform == "twitter":
+                            # Display Twitter metadata
+                            if is_thread:
+                                st.write("**Twitter/X Thread**")
+                            else:
+                                st.write("**Twitter/X Post**")
+
+                            # Display hashtags
+                            if metadata.get("hashtags"):
+                                hashtags_html = " ".join([
+                                    f'<span style="color: #1DA1F2; font-weight: bold;">#{tag}</span>'
+                                    for tag in metadata.get("hashtags", [])
+                                ])
+                                st.markdown(f"**Hashtags:** {hashtags_html}", unsafe_allow_html=True)
+
+                            # Display mentions
+                            if metadata.get("mentions"):
+                                mentions_html = " ".join([
+                                    f'<span style="color: #1DA1F2; font-weight: bold;">@{user}</span>'
+                                    for user in metadata.get("mentions", [])
+                                ])
+                                st.markdown(f"**Mentions:** {mentions_html}", unsafe_allow_html=True)
+
+                        elif platform == "reddit":
+                            # Display Reddit metadata
+                            if is_thread:
+                                st.write("**Reddit Thread**")
+                            else:
+                                st.write("**Reddit Post**")
+
+                            if metadata.get("subreddit"):
+                                st.write(f"**Subreddit:** r/{metadata.get('subreddit')}")
+
+                        elif platform:
+                            # Generic social media display
+                            if is_thread:
+                                st.write(f"**{platform.title()} Thread**")
+                            else:
+                                st.write(f"**{platform.title()} Post**")
+
+                        # Show thread URLs if available
+                        if metadata.get("thread_urls"):
+                            st.subheader("Thread Posts")
+                            for i, url in enumerate(metadata.get("thread_urls")):
+                                st.markdown(f"{i+1}. [{url}]({url})")
+                        else:
+                            # Add a link to the original post
+                            st.markdown(f"**[View original post]({content.get('source')})**")
+
                     else:  # text or other types
                         st.markdown(content.get("full_text", "No full text available"))
                 
@@ -967,7 +1201,7 @@ def search_page():
                 # Content type filter
                 content_type = st.selectbox(
                     "Content Type",
-                    ["All", "url", "pdf", "audio", "text"]
+                    ["All", "url", "pdf", "audio", "text", "social"]
                 )
                 
                 # Tags filter
