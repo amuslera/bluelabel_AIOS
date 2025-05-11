@@ -52,5 +52,15 @@ bluelabel.db
 vector_store/
 *.sqlite
 *.sqlite3
+app/db/vector_db/
 app/db/vector_db/chroma.sqlite3
 **/.claude/settings.local.json
+
+# Logs
+*.log
+logs/
+api_server.log
+server.log
+streamlit.log
+streamlit_app.log
+test_output.log
