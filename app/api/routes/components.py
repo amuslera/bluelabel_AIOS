@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 import json
 
 from app.core.mcp import MCPComponent, ComponentRegistry, ComponentEditor, ComponentTester
-from app.core.model_router import ModelRouter
+from app.core.model_router.router import ModelRouter
 
 # Initialize router
 router = APIRouter(
