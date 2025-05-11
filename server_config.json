@@ -1,0 +1,35 @@
+{
+  "api": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "reload": true,
+    "timeout": 300
+  },
+  "ui": {
+    "host": "127.0.0.1",
+    "port": 8502,
+    "allow_cors": true,
+    "use_watchdog": true
+  },
+  "vector_store": {
+    "persist_directory": "app/db/vector_db",
+    "collection_name": "content"
+  },
+  "database": {
+    "url": "sqlite:///./bluelabel.db"
+  },
+  "llm": {
+    "local": {
+      "enabled": true,
+      "host": "http://localhost:11434",
+      "default_model": "llama3",
+      "default_timeout": 30
+    },
+    "cloud": {
+      "openai_enabled": true,
+      "anthropic_enabled": true,
+      "default_provider": "anthropic",
+      "default_timeout": 60
+    }
+  }
+}

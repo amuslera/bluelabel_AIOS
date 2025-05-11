@@ -323,26 +323,46 @@ def process_content_page():
 def display_processing_result(result):
     """Display content processing result"""
     if result.get("status") == "success":
-        st.success("Content processed successfully!")
-        
+        # Check if fallback was used
+        fallback_used = False
+        fallback_reason = ""
+        providers_used = result.get("providers_used", {})
+
+        # Check if any provider is 'fallback'
+        for task, provider in providers_used.items():
+            if provider == "fallback":
+                fallback_used = True
+                fallback_reason = result.get("fallback_reason", "")
+                break
+
+        # Display success message with caveat if fallback was used
+        if fallback_used:
+            st.warning("Content processed with fallback mechanisms due to LLM unavailability.")
+            if fallback_reason:
+                st.info(f"Reason: {fallback_reason}")
+        else:
+            st.success("Content processed successfully!")
+
         # Check if content was stored
         storage_info = result.get("storage", {})
         if storage_info.get("stored"):
             st.success(f"Content saved to knowledge repository with ID: {storage_info.get('content_id')}")
-            
+
             # Add button to view in knowledge repository
             if st.button("View in Knowledge Repository"):
                 st.session_state.page = "View Knowledge"
                 st.session_state.selected_content_id = storage_info.get("content_id")
                 st.session_state.view_content_details = True
                 st.experimental_rerun()
-        
+        elif storage_info.get("error"):
+            st.warning(f"Content could not be stored: {storage_info.get('error')}")
+
         # Processing Result container
         st.header("Processing Result")
-            
+
         processed = result.get("processed_content", {})
         content_type = result.get("content_type", "unknown")
-        
+
         # Title with content type icon
         icon = CONTENT_TYPE_ICONS.get(content_type, "📄")
         st.header(f"{icon} {processed.get('title', 'Untitled')}")
@@ -354,7 +374,7 @@ def display_processing_result(result):
             with col1:
                 source = processed.get('source', 'Unknown')
                 # Only make URLs clickable
-                if source.startswith("http"):
+                if source and isinstance(source, str) and source.startswith("http"):
                     st.markdown(f"**Source:** [{source}]({source})")
                 else:
                     st.markdown(f"**Source:** {source}")
@@ -369,7 +389,7 @@ def display_processing_result(result):
                 st.markdown(f"**Duration:** {processed.get('duration')}")
                 if processed.get("language"):
                     st.markdown(f"**Language:** {processed.get('language').title()}")
-            
+
             # Author and date if available
             if processed.get("author") or processed.get("published_date"):
                 col1, col2 = st.columns(2)
@@ -379,37 +399,54 @@ def display_processing_result(result):
                 if processed.get("published_date"):
                     with col2:
                         st.markdown(f"**Published:** {format_date(processed.get('published_date'))}")
-        
+
         # Summary section
         st.subheader("Summary")
-        st.markdown(processed.get("summary", "No summary available"))
-        
+        summary = processed.get("summary", "No summary available")
+        st.markdown(summary)
+
+        if fallback_used and "summary" in providers_used and providers_used["summary"] == "fallback":
+            st.info("⚠️ This is a basic summary generated without LLM processing")
+
         # Show which providers were used
-        with st.expander("AI Models Used", expanded=False):
+        with st.expander("AI Models Used", expanded=fallback_used):
             providers_used = result.get("providers_used", {})
             if providers_used:
                 st.markdown("The following AI models were used to process this content:")
-                
+
                 for task, provider in providers_used.items():
                     if provider:
-                        st.markdown(f"- **{task.replace('_', ' ').title()}**: {provider.title()}")
+                        provider_display = provider.title()
+                        if provider == "fallback":
+                            provider_display = "⚠️ Fallback (No LLM)"
+                        st.markdown(f"- **{task.replace('_', ' ').title()}**: {provider_display}")
                     else:
                         st.markdown(f"- **{task.replace('_', ' ').title()}**: Not used")
-        
+
+                if fallback_used:
+                    st.warning("""
+                    ⚠️ Fallback processing was used because the LLM service was not available.
+                    This results in simpler processing with less advanced features.
+                    The system will automatically attempt to use LLM services when they become available.
+                    """)
+
         # Tags
         if processed.get("tags"):
             st.subheader("Tags")
             tags_html = " ".join([
-                f'<span style="background-color: #f0f0f0; padding: 3px 8px; margin-right: 5px; border-radius: 10px;">{tag}</span>' 
+                f'<span style="background-color: #f0f0f0; padding: 3px 8px; margin-right: 5px; border-radius: 10px;">{tag}</span>'
                 for tag in processed.get("tags", [])
             ])
             st.markdown(tags_html, unsafe_allow_html=True)
-        
+
+            if fallback_used and "tagging" in providers_used and providers_used["tagging"] == "fallback":
+                st.info("⚠️ These are basic tags extracted without LLM processing")
+
         # Entities
         if processed.get("entities"):
             st.subheader("Entities")
             entities = processed.get("entities", {})
-            
+
             # Try to parse if it's a string
             if isinstance(entities, str):
                 try:
@@ -417,7 +454,11 @@ def display_processing_result(result):
                 except:
                     st.warning("Could not parse entities")
                     entities = {}
-            
+
+            # Show fallback notice if applicable
+            if fallback_used and "entity_extraction" in providers_used and providers_used["entity_extraction"] == "fallback":
+                st.info("⚠️ Entity extraction was limited due to LLM unavailability")
+
             # Use tabs instead of nested expanders for entity categories
             if entities and len(entities) > 0:
                 entity_tabs = st.tabs([category.title() for category in entities.keys()])
@@ -431,7 +472,42 @@ def display_processing_result(result):
                             ])
                             st.markdown(entity_html, unsafe_allow_html=True)
     else:
-        st.error(f"Processing error: {result.get('message', 'Unknown error')}")
+        # Handle different types of errors
+        error_message = result.get('message', 'Unknown error')
+
+        # Check if this is a timeout error
+        if "timeout" in error_message.lower() or "timed out" in error_message.lower():
+            st.error("⏱️ Processing timed out")
+            st.info("""
+            The processing request took too long to complete. This may be due to:
+            1. Heavy server load
+            2. Complex content that requires more processing time
+            3. Issues connecting to the LLM service
+
+            Try again with a smaller piece of content or try later when the system may be less busy.
+            """)
+        # Check if this is a connection error
+        elif "connect" in error_message.lower() or "connection" in error_message.lower():
+            st.error("🔌 Connection error")
+            st.info("""
+            There was an error connecting to the required services. This may be due to:
+            1. Network connectivity issues
+            2. The LLM service being unavailable
+            3. Server configuration problems
+
+            You can try the 'test' endpoints while we work to resolve the issue.
+            """)
+        else:
+            # Generic error handling
+            st.error(f"Processing error: {error_message}")
+
+            # Provide more helpful guidance based on error type
+            if "not available" in error_message.lower():
+                st.info("The required processing service is not available right now. Try again later.")
+            elif "format" in error_message.lower() or "invalid" in error_message.lower():
+                st.info("There may be an issue with the format of the content. Try with different content.")
+            else:
+                st.info("An unexpected error occurred during processing. Please try again with different content or contact support.")
 
 def view_knowledge_page():
     st.header("Knowledge Repository")
