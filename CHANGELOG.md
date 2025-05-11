@@ -15,6 +15,10 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
 - Added email gateway integration with IMAP/SMTP support
 - Added WhatsApp API integration for messaging-based content submission
 - Created unified API endpoints for managing gateway services
+- Fixed LLM processing timeout issues to prevent system hangs
+- Added proper aiohttp timeout configuration for Ollama client
+- Implemented robust task cancellation for orphaned LLM requests
+- Created test script to verify timeout functionality
 
 ## Version History
 
