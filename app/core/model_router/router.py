@@ -40,19 +40,37 @@ class ModelRouter:
         """Check if local LLM is available"""
         if not self.local_enabled or not self.ollama_client:
             return False
-        
-        # First check if the model exists
+
+        # First check if Ollama server is reachable
         try:
-            models = await self.ollama_client.list_models()
+            if not await self.ollama_client.is_available(timeout=3.0):
+                logger.warning("Ollama server is not available")
+                return False
+
+            # Then check if the model exists
+            models = await self.ollama_client.list_models(timeout=5.0)
+
+            if not models:
+                logger.warning("No models available in Ollama")
+                return False
+
             if self.local_model not in models:
-                logger.info(f"Local model {self.local_model} not found, attempting to pull it...")
-                await self.ollama_client.pull_model(self.local_model)
+                logger.info(f"Local model {self.local_model} not found in {models}, attempting to pull it...")
+                pull_result = await self.ollama_client.pull_model(self.local_model)
+
+                if pull_result.get("status") != "success":
+                    logger.error(f"Failed to pull model {self.local_model}: {pull_result.get('message')}")
+                    return False
+
                 logger.info(f"Successfully pulled model {self.local_model}")
+            else:
+                logger.info(f"Found model {self.local_model} in available models")
+
+            return True
+
         except Exception as e:
             logger.error(f"Error checking/pulling local model: {str(e)}")
             return False
-        
-        return await self.ollama_client.is_available()
     
     async def assess_complexity(self, task: str, content: Dict[str, Any]) -> float:
         """Assess the complexity of a task (0.0-1.0)"""
@@ -166,17 +184,36 @@ class ModelRouter:
 
             # Execute the routing with a global timeout
             try:
+                # Create a named task for better debugging
                 routing_task = asyncio.create_task(_do_routing(), name=f"llm_routing_{task}")
-                result = await asyncio.wait_for(routing_task, timeout=global_timeout)
 
-                # Log completion time
-                elapsed_time = time.time() - start_time
-                logger.info(f"LLM routing for task '{task}' completed in {elapsed_time:.2f} seconds")
+                try:
+                    # Wait for the task with a timeout
+                    result = await asyncio.wait_for(routing_task, timeout=global_timeout)
 
-                return result
-            except asyncio.TimeoutError:
-                logger.error(f"Global timeout ({global_timeout}s) exceeded for task '{task}'")
-                return self._generate_simplified_result(task, content, "GLOBAL_TIMEOUT")
+                    # Log completion time
+                    elapsed_time = time.time() - start_time
+                    logger.info(f"LLM routing for task '{task}' completed in {elapsed_time:.2f} seconds")
+
+                    return result
+                except asyncio.TimeoutError:
+                    # Properly cancel the task when timeout occurs to prevent orphaned tasks
+                    if not routing_task.done():
+                        logger.warning(f"Cancelling routing task due to timeout")
+                        routing_task.cancel()
+
+                        # Wait briefly for cancellation to complete, with a short timeout
+                        try:
+                            await asyncio.wait_for(routing_task, timeout=2.0)
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            pass
+
+                    logger.error(f"Global timeout ({global_timeout}s) exceeded for task '{task}'")
+                    return self._generate_simplified_result(task, content, "GLOBAL_TIMEOUT")
+            except asyncio.CancelledError:
+                logger.warning(f"LLM routing for task '{task}' was cancelled by parent")
+                # Re-raise to allow proper cancellation propagation
+                raise
 
         except Exception as e:
             # Last-resort error handling
@@ -195,16 +232,11 @@ class ModelRouter:
             # Try to provide a simplified result when possible rather than failing completely
             return self._generate_simplified_result(task, content, "LOCAL_LLM_NOT_INITIALIZED")
 
-        # Check local availability with a strict timeout
+        # Check local availability directly, since is_local_available now handles timeouts internally
         try:
-            import asyncio
-            is_available = await asyncio.wait_for(
-                self.is_local_available(),
-                timeout=5.0  # Short timeout for availability check
-            )
-        except asyncio.TimeoutError:
-            logger.warning("Local LLM availability check timed out")
-            is_available = False
+            # Use direct call - all timeouts handled within the method
+            is_available = await self.is_local_available()
+            logger.info(f"Local LLM availability check result: {is_available}")
         except Exception as e:
             logger.error(f"Error checking local LLM availability: {str(e)}")
             is_available = False
@@ -230,27 +262,19 @@ class ModelRouter:
             logger.info(f"Generating with local model: {model}")
             import asyncio
 
-            # Use asyncio.shield to prevent task cancellation during critical operations
-            with_timeout = asyncio.wait_for(
-                asyncio.shield(
-                    self.ollama_client.generate(
-                        prompt=prompt,
-                        model=model,
-                        system_prompt=system_prompt,
-                        temperature=temperature,
-                        max_tokens=max_tokens
-                    )
-                ),
+            # Pass the timeout to the client directly instead of using wait_for+shield
+            # which can lead to orphaned tasks
+            logger.info(f"Sending Ollama generation request directly with {timeout}s timeout")
+            response = await self.ollama_client.generate(
+                prompt=prompt,
+                model=model,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 timeout=timeout
             )
 
-            # Create a task with clear logging
-            generation_task = asyncio.create_task(with_timeout, name=f"ollama_generate_{task}")
-
-            # Wait for the task with extensive logging
-            logger.info(f"Waiting for Ollama generation task to complete")
-            response = await generation_task
-            logger.info(f"Ollama generation task completed")
+            logger.info(f"Ollama generation call completed with status: {response.get('status')}")
 
             if response.get("status") == "success":
                 return {
