@@ -1,0 +1,179 @@
+# Changelog
+
+This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
+
+## Version History
+
+### v0.1.0 - Initial Setup (commit: 5950f80)
+**Date**: Initial commit
+
+**Features**:
+- Basic FastAPI application structure
+- Agent system foundation
+- Project scaffolding
+
+**Status**: Proof of concept with minimal functionality.
+
+**Issues**:
+- No content processors implemented
+- No UI components
+- Missing database integration
+
+**Next Steps**:
+- Implement basic UI with Streamlit
+- Create first agent implementation
+- Add initial content processor
+
+---
+
+### v0.2.0 - Agent Framework (commit: 471261d)
+**Date**: After initial commit
+
+**Features**:
+- ContentMind agent implementation
+- Model router for LLM integration
+- Initial LLM support
+
+**Status**: Basic framework established but limited functionality.
+
+**Issues**:
+- Limited content type support
+- No database or storage solution
+- Poor error handling
+
+**Next Steps**:
+- Enhance Anthropic model selection with dynamic discovery
+- Implement URL content processor
+- Add basic storage capabilities
+
+---
+
+### v0.3.0 - Improved Model Selection (commit: b85efe5)
+**Date**: After agent framework
+
+**Features**:
+- Enhanced Anthropic model selection with dynamic discovery
+- Improved error handling
+- Better model router implementation
+
+**Status**: Framework with basic content processing capabilities.
+
+**Issues**:
+- Limited model availability checking
+- No fallback mechanism for offline models
+- Missing content types (PDF, audio)
+
+**Next Steps**:
+- Implement robust local LLM integration
+- Add support for more content types
+- Improve UI error handling
+
+---
+
+### v0.4.0 - Robust LLM Integration (commit: 8bc811b)
+**Date**: After model selection improvements
+
+**Features**:
+- Robust local LLM integration
+- Auto-pull models when not available
+- Improved Streamlit UI error handling
+
+**Status**: Functional system with basic content processing.
+
+**Issues**:
+- Limited content type support
+- No knowledge repository
+- Minimal UI features
+
+**Next Steps**:
+- Implement PDF and audio processors
+- Add knowledge repository with vector storage
+- Enhance UI with better content display
+
+---
+
+### v0.5.0 - Knowledge Repository (commit: c0d09ed)
+**Date**: May 9, 2025
+
+**Features**:
+- PDF processor with metadata extraction
+- Audio processor with Whisper transcription
+- Vector database integration with ChromaDB
+- Knowledge repository with SQLAlchemy
+- Enhanced UI with improved content display
+- Test agent for debugging without LLM dependency
+
+**Status**: Functional knowledge management system with multi-format content support.
+
+**Issues**:
+- LLM timeout when processing content
+- Server management issues (port conflicts)
+- Parameter inconsistencies between layers
+
+**Next Steps**:
+1. **Debugging LLM Integration**:
+   - Add proper timeout handling in LLM requests
+   - Implement fallback mechanisms when LLM is unavailable
+   - Add better error reporting in the UI
+
+2. **Server Management**:
+   - Configure proper process management to avoid port conflicts
+   - Add graceful shutdown and restart capabilities
+   - Consider containerization for more consistent deployment
+
+3. **Add Social Media Processor**:
+   - Implement Twitter/X content extraction
+   - Add LinkedIn post processing
+   - Create unified social media interface
+
+## Current Development Status
+
+The system currently provides:
+- Content processing for URLs, PDFs, audio, and text
+- Knowledge repository with vector search capabilities
+- Tag and entity extraction and management
+- Multi-format content browsing and search
+- Hybrid LLM integration (local and cloud)
+
+Key architectural components:
+- Agent framework for modular content processing
+- Vector database for semantic search
+- Structured storage for content relationships
+- Model router for intelligent LLM selection
+
+## Known Issues
+
+1. **LLM Processing Timeout**:
+   - The system hangs when processing content with LLM integration
+   - Likely caused by connection issues with Ollama or timeout configuration
+   - Current workaround: Use test agent to bypass LLM processing
+
+2. **Server Management**:
+   - Port conflicts between restarts
+   - Difficult to manage server processes
+   - Manual intervention often required
+
+3. **UI Responsiveness**:
+   - Long-running tasks block UI
+   - Limited feedback during processing
+   - No progress indicators
+
+## Planned Features
+
+### Near Term (Next Release)
+- Fix LLM timeout issues
+- Add proper error handling and recovery
+- Implement social media content processor
+- Enhance UI with progress indicators
+
+### Medium Term
+- Add background processing for long-running tasks
+- Implement user authentication and profiles
+- Create content analytics dashboard
+- Add export capabilities (PDF, Markdown, etc.)
+
+### Long Term
+- Develop automated research capabilities
+- Implement collaboration features
+- Create knowledge graph visualization
+- Add integration with productivity tools
