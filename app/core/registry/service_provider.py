@@ -213,12 +213,86 @@ def _load_system_components() -> None:
 def _load_agent_components() -> None:
     """Load components used by agents."""
     editor = get_component_editor()
-
+    
     # ContentMind components
     _load_contentmind_components(editor)
 
     # Researcher components
     _load_researcher_components(editor)
+    
+    # Gateway components
+    _load_gateway_components(editor)
+
+def _load_gateway_components(editor: ComponentEditor) -> None:
+    """Load components used by the Gateway agent."""
+    registry = get_component_registry()
+    
+    def upsert_component(id, **kwargs):
+        if registry.get_component(id) is not None:
+            editor.update_component(
+                component_id=id,
+                name=kwargs.get("name"),
+                description=kwargs.get("description"),
+                template=kwargs.get("template"),
+                tags=kwargs.get("tags"),
+                metadata=kwargs.get("metadata"),
+                increment_version=False
+            )
+        else:
+            editor.create_component(id=id, **kwargs)
+    
+    upsert_component(
+        id="gateway_classify_content",
+        name="Content Classification",
+        description="Classifies content from various sources",
+        template="""
+        You are the Gateway agent responsible for classifying content from various sources.
+        
+        Examine the content below and determine:
+        1. The content type (text, url, pdf, audio, image, etc.)
+        2. Whether this appears to be a research query or content to be processed
+        3. Which agent would be best to handle this content (contentmind or researcher)
+        
+        Content to classify:
+        {content}
+        
+        Provide your classification in the following format:
+        Content Type: [content type]
+        Is Research Query: [yes/no]
+        Recommended Agent: [contentmind/researcher]
+        Reasoning: [brief explanation]
+        """,
+        tags=["agent", "gateway", "classification"],
+        metadata={"agent": "gateway", "task": "classify_content"}
+    )
+    
+    upsert_component(
+        id="gateway_route_content",
+        name="Content Routing",
+        description="Routes content to appropriate agents",
+        template="""
+        You are the Gateway agent responsible for routing content to appropriate processing agents.
+        
+        Based on the content and its metadata, determine:
+        1. Which agent should process this content (contentmind or researcher)
+        2. Any special processing instructions for that agent
+        
+        Content metadata:
+        {metadata}
+        
+        Content preview:
+        {content_preview}
+        
+        Provide your routing decision in the following format:
+        Target Agent: [contentmind/researcher]
+        Processing Type: [content/query/research]
+        Priority: [high/medium/low]
+        Special Instructions: [any special processing instructions]
+        Reasoning: [brief explanation of your decision]
+        """,
+        tags=["agent", "gateway", "routing"],
+        metadata={"agent": "gateway", "task": "route_content"}
+    )
 
 def _load_researcher_components(editor: ComponentEditor) -> None:
     """Load components used by the Researcher agent."""
@@ -355,7 +429,7 @@ def _load_contentmind_components(editor: ComponentEditor) -> None:
         description="Processes PDFs for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from a PDF document.\n\nExtract the key information from this PDF content, organizing it in a way that preserves the document's structure while highlighting the most important information.\n\nPDF content:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "pdf-processing"],
-        metadata={"agent": "contentmind", "task": "process_pdf"}
+        metadata={"agent", "contentmind", "task": "process_pdf"}
     )
     upsert_component(
         id="agent_contentmind_process_audio",

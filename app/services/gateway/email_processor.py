@@ -393,21 +393,21 @@ class EmailProcessor:
         return "text", body_text, None
     
     async def _process_content_for_aios(self, email_content: EmailContent) -> Dict[str, Any]:
-        """Process the extracted content through the AIOS processing pipeline
-        
+        """Process the extracted content through the Gateway agent
+
         Args:
             email_content: Extracted email content
-            
+
         Returns:
             Processing result
         """
         try:
             import aiohttp
             import tempfile
-            
+
             # Determine content to process
             content_to_process = email_content.content
-            
+
             # If it's bytes data (like for PDFs or audio), save to a temp file and encode as base64
             if isinstance(content_to_process, bytes):
                 # Create a temporary file
@@ -415,46 +415,68 @@ class EmailProcessor:
                 with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
                     temp_file.write(content_to_process)
                     temp_path = temp_file.name
-                
+
                 try:
                     # Read the file and encode as base64
                     with open(temp_path, "rb") as file:
                         file_content = file.read()
                         content_to_process = f"data:{email_content.content_type}/{suffix.lstrip('.')};base64,{base64.b64encode(file_content).decode('utf-8')}"
-                    
+
                     # Remove the temporary file
                     os.unlink(temp_path)
                 except Exception as e:
                     logger.error(f"Error processing temp file: {str(e)}")
                     # If there's an error, just use the content directly
                     content_to_process = email_content.body_text
-            
-            # Create the API request
-            request_data = {
-                "content_type": email_content.content_type,
-                "content": content_to_process,
-                "metadata": {
-                    **email_content.metadata,
-                    "email_subject": email_content.subject,
-                    "email_sender": email_content.sender,
-                    "email_date": email_content.date
-                }
+
+            # Prepare the email data for the Gateway agent
+            email_data = {
+                "subject": email_content.subject,
+                "sender": email_content.sender,
+                "recipient": email_content.recipient,
+                "date": email_content.date,
+                "plain_text": email_content.body_text,
+                "html_content": email_content.body_html,
+                "message_id": email_content.original_message_id,
+                "attachments": []
             }
-            
-            # Call the API to process the content
-            api_endpoint = "http://localhost:8080/agents/contentmind/process"
-            
+
+            # Convert attachments to the format expected by Gateway agent
+            for attachment in email_content.attachments:
+                # Convert binary data to base64
+                if isinstance(attachment.get("data"), bytes):
+                    b64_content = base64.b64encode(attachment["data"]).decode("utf-8")
+                else:
+                    # Already base64 or string
+                    b64_content = attachment.get("data", "")
+
+                email_data["attachments"].append({
+                    "filename": attachment.get("filename", "unknown"),
+                    "mime_type": attachment.get("content_type", "application/octet-stream"),
+                    "content": b64_content,
+                    "size": attachment.get("size", 0)
+                })
+
+            # Create the API request for the Gateway agent
+            gateway_request = {
+                "source": "email",
+                "email_data": email_data
+            }
+
+            # Call the Gateway agent API endpoint
+            api_endpoint = "http://localhost:8080/agents/gateway/process"
+
             async with aiohttp.ClientSession() as session:
-                async with session.post(api_endpoint, json=request_data) as response:
+                async with session.post(api_endpoint, json=gateway_request) as response:
                     result = await response.json()
-                    
+
                     # Add some metadata for the reply
                     if not result.get("email_metadata"):
                         result["email_metadata"] = {}
-                    
+
                     result["email_metadata"]["original_subject"] = email_content.subject
                     result["email_metadata"]["processed_at"] = datetime.now().isoformat()
-                    
+
                     return result
                 
         except Exception as e:

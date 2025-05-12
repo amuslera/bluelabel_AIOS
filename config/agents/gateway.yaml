@@ -1,0 +1,26 @@
+# Gateway agent configuration
+id: gateway
+name: Gateway
+description: "Agent for routing content from various sources to appropriate processing agents"
+version: "1.0.0"
+
+# Supported content types (source formats)
+supported_sources:
+  - email
+  - whatsapp
+  - slack
+  - direct
+
+# Features
+features:
+  - content_routing
+  - source_detection
+  - agent_selection
+  - content_normalization
+  - metadata_extraction
+
+# Gateway configuration
+settings:
+  default_agent: contentmind
+  enable_auto_routing: true
+  extract_metadata: true

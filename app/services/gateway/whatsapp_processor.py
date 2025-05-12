@@ -407,35 +407,35 @@ class WhatsAppProcessor:
             return None
     
     async def _process_content_for_aios(self, whatsapp_content: WhatsAppContent) -> Dict[str, Any]:
-        """Process the extracted content through the AIOS processing pipeline
-        
+        """Process the extracted content through the Gateway agent
+
         Args:
             whatsapp_content: Extracted WhatsApp content
-            
+
         Returns:
             Processing result
         """
         try:
             # Determine content to process
             content_to_process = whatsapp_content.content
-            
+
             # If it's bytes data (like for PDFs or audio), save to a temp file and encode as base64
             if isinstance(content_to_process, bytes):
                 # Create a temporary file
                 suffix = ""
                 if whatsapp_content.content_filename:
                     suffix = os.path.splitext(whatsapp_content.content_filename)[1]
-                
+
                 with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
                     temp_file.write(content_to_process)
                     temp_path = temp_file.name
-                
+
                 try:
                     # Read the file and encode as base64
                     with open(temp_path, "rb") as file:
                         file_content = file.read()
                         mime_prefix = "application/octet-stream"
-                        
+
                         # Determine mime type
                         if whatsapp_content.content_type == "pdf":
                             mime_prefix = "application/pdf"
@@ -445,9 +445,9 @@ class WhatsAppProcessor:
                             mime_prefix = "image/jpeg"
                         elif whatsapp_content.content_type == "video":
                             mime_prefix = "video/mp4"
-                        
+
                         content_to_process = f"data:{mime_prefix};base64,{base64.b64encode(file_content).decode('utf-8')}"
-                    
+
                     # Remove the temporary file
                     os.unlink(temp_path)
                 except Exception as e:
@@ -460,34 +460,40 @@ class WhatsAppProcessor:
                             "status": "error",
                             "message": f"Failed to process media content: {str(e)}"
                         }
-            
-            # Create the API request
-            request_data = {
-                "content_type": whatsapp_content.content_type,
-                "content": content_to_process,
-                "metadata": {
-                    **whatsapp_content.metadata,
-                    "whatsapp_id": whatsapp_content.wa_id,
-                    "message_id": whatsapp_content.message_id,
-                    "message_type": whatsapp_content.message_type
-                }
+
+            # Prepare the message data for the Gateway agent
+            message_data = {
+                "from": whatsapp_content.wa_id,
+                "text": content_to_process if whatsapp_content.message_type == "text" else "",
+                "message_id": whatsapp_content.message_id,
+                "timestamp": whatsapp_content.timestamp,
+                "media_type": whatsapp_content.content_type,
+                "media_url": content_to_process if whatsapp_content.content_type in ["pdf", "audio", "image", "video"] else None,
+                "filename": whatsapp_content.content_filename,
+                "metadata": whatsapp_content.metadata
             }
-            
-            # Call the API to process the content
-            api_endpoint = "http://localhost:8080/agents/contentmind/process"
-            
+
+            # Create the API request for the Gateway agent
+            gateway_request = {
+                "source": "whatsapp",
+                "message_data": message_data
+            }
+
+            # Call the Gateway agent API endpoint
+            api_endpoint = "http://localhost:8080/agents/gateway/process"
+
             async with aiohttp.ClientSession() as session:
-                async with session.post(api_endpoint, json=request_data) as response:
+                async with session.post(api_endpoint, json=gateway_request) as response:
                     result = await response.json()
-                    
+
                     # Add some metadata for the reply
                     if not result.get("whatsapp_metadata"):
                         result["whatsapp_metadata"] = {}
-                    
+
                     result["whatsapp_metadata"]["wa_id"] = whatsapp_content.wa_id
                     result["whatsapp_metadata"]["message_id"] = whatsapp_content.message_id
                     result["whatsapp_metadata"]["processed_at"] = datetime.now().isoformat()
-                    
+
                     return result
                 
         except Exception as e:
