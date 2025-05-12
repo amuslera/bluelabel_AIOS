@@ -1,0 +1,33 @@
+# ContentMind agent configuration
+id: contentmind
+name: ContentMind
+description: "Agent for processing and organizing various types of content"
+version: "1.0.0"
+
+# Supported content types
+supported_content_types:
+  - url
+  - pdf
+  - audio
+  - text
+  - social
+
+# Features
+features:
+  - content_extraction
+  - summarization
+  - entity_extraction
+  - tagging
+
+# Processing options
+processing:
+  max_content_length: 100000
+  summarization_length: 500
+  extract_entities: true
+  generate_tags: true
+
+# Default provider preferences
+default_provider_preferences:
+  summary: null  # Auto-select
+  entity_extraction: null  # Auto-select
+  tagging: null  # Auto-select

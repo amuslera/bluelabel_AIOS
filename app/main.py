@@ -63,11 +63,34 @@ except Exception as e:
     model_router = None
 
 try:
+    # Initialize agent registry and discover available agents
+    from app.core.registry.agent_registry import get_agent_registry
+    agent_registry = get_agent_registry()
+
+    # Discover available agent classes
+    discovered_agents = agent_registry.discover_agents("app.agents")
+    logger.info(f"Discovered {len(discovered_agents)} agent classes: {', '.join(discovered_agents)}")
+
+    # Load agent configurations
+    agent_registry.load_all_configs()
+
     # Initialize ContentMind agent
-    content_mind = ContentMindAgent({"id": "contentmind"}, model_router) if model_router else None
-    logger.info("ContentMind agent initialized successfully")
+    content_mind = None
+    if "contentmind" in agent_registry.list_agent_classes():
+        content_mind = agent_registry.create_agent("contentmind", model_router)
+        if content_mind:
+            logger.info("ContentMind agent initialized successfully")
+        else:
+            logger.error("Failed to create ContentMind agent instance")
+    else:
+        # Fallback to direct instantiation if discovery failed
+        content_mind = ContentMindAgent({"id": "contentmind"}, model_router) if model_router else None
+        if content_mind:
+            logger.info("ContentMind agent initialized successfully (direct instantiation)")
+            # Register the instance in the registry
+            agent_registry.register_agent("contentmind", content_mind)
 except Exception as e:
-    logger.error(f"Failed to initialize ContentMind agent: {str(e)}")
+    logger.error(f"Failed to initialize agent registry or ContentMind agent: {str(e)}")
     # Continue without the agent
     content_mind = None
 
@@ -103,12 +126,83 @@ async def process_and_store_content(agent, request, knowledge_service, logger):
 async def root():
     return {"message": "Welcome to Bluelabel AIOS API"}
 
+@app.get("/agents")
+async def list_agents():
+    """List all available agents and their capabilities"""
+    agent_registry = get_agent_registry()
+
+    # Get available agent classes
+    available_classes = agent_registry.list_agent_classes()
+
+    # Get instantiated agents and their capabilities
+    agent_instances = agent_registry.list_available_agents()
+
+    # Build response
+    response = {
+        "agent_types": [],
+        "status": "success"
+    }
+
+    # Add agents from both classes and instances
+    for agent_id in set(available_classes) | set(agent_instances.keys()):
+        agent_info = {"id": agent_id}
+
+        # Add capabilities if we have an instance
+        if agent_id in agent_instances:
+            agent_info.update(agent_instances[agent_id])
+        else:
+            # Add basic info for non-instantiated agent classes
+            agent_info["status"] = "not_instantiated"
+            config = agent_registry.get_agent_config(agent_id)
+            if config:
+                agent_info.update({
+                    "name": config.get("name", agent_id),
+                    "description": config.get("description", "No description"),
+                    "supported_content_types": config.get("supported_content_types", []),
+                    "features": config.get("features", [])
+                })
+
+        response["agent_types"].append(agent_info)
+
+    return response
+
+@app.post("/agents/{agent_id}/process")
+async def process_with_agent(
+    agent_id: str,
+    request: Dict[str, Any],
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+):
+    """Process a request with any registered agent and store in knowledge repository"""
+    # Get agent registry
+    agent_registry = get_agent_registry()
+
+    # Get agent instance (this will attempt to create it if needed)
+    agent_instance = agent_registry.get_agent(agent_id)
+
+    # If we don't have an instance yet, try to create it
+    if not agent_instance and agent_id in agent_registry.list_agent_classes():
+        agent_instance = agent_registry.create_agent(agent_id, model_router)
+
+    # Check if agent exists
+    if not agent_instance:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found or could not be instantiated")
+
+    # Process request with agent
+    try:
+        return await process_and_store_content(agent_instance, request, knowledge_service, logger)
+    except Exception as e:
+        logger.error(f"Error processing with agent '{agent_id}': {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Error processing with agent '{agent_id}': {str(e)}"
+        }
+
 @app.post("/agents/contentmind/process")
 async def process_content(
     request: Dict[str, Any],
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """Process content with ContentMind agent and store in knowledge repository"""
+    """Process content with ContentMind agent and store in knowledge repository (legacy endpoint)"""
     if not content_mind:
         raise HTTPException(status_code=503, detail="ContentMind agent is not available")
     try:
@@ -286,9 +380,13 @@ async def health():
 from app.api.routes.components import router as components_router
 app.include_router(components_router)
 
-# Include Gateway API routes
-from app.services.gateway.controller import router as gateway_router
-app.include_router(gateway_router)
+# Include Gateway API routes (optional)
+try:
+    from app.services.gateway.controller import router as gateway_router
+    app.include_router(gateway_router)
+    logger.info("Gateway API routes included")
+except ImportError as e:
+    logger.warning(f"Gateway API routes not included due to missing dependencies: {str(e)}")
 
 # If run directly, start the server
 if __name__ == "__main__":

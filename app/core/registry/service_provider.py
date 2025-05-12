@@ -213,9 +213,92 @@ def _load_system_components() -> None:
 def _load_agent_components() -> None:
     """Load components used by agents."""
     editor = get_component_editor()
-    
+
     # ContentMind components
     _load_contentmind_components(editor)
+
+    # Researcher components
+    _load_researcher_components(editor)
+
+def _load_researcher_components(editor: ComponentEditor) -> None:
+    """Load components used by the Researcher agent."""
+    registry = get_component_registry()
+
+    def upsert_component(id, **kwargs):
+        if registry.get_component(id) is not None:
+            editor.update_component(
+                component_id=id,
+                name=kwargs.get("name"),
+                description=kwargs.get("description"),
+                template=kwargs.get("template"),
+                tags=kwargs.get("tags"),
+                metadata=kwargs.get("metadata"),
+                increment_version=False
+            )
+        else:
+            editor.create_component(id=id, **kwargs)
+
+    upsert_component(
+        id="research_query",
+        name="Research Query",
+        description="Guides the search for information on a topic",
+        template="""
+        You are a research assistant tasked with finding information about: {query}
+
+        Please provide information from multiple sources about this topic. For each source,
+        format your response as follows:
+
+        Source: [Source Name]
+        [Content from this source]
+
+        Source: [Another Source Name]
+        [Content from this source]
+
+        Provide information from at least 3 different sources if possible.
+        Be factual, accurate, and comprehensive.
+        """,
+        tags=["agent", "researcher", "search"],
+        metadata={"agent": "researcher", "task": "research"}
+    )
+
+    upsert_component(
+        id="research_synthesize",
+        name="Research Synthesis",
+        description="Synthesizes information from multiple sources",
+        template="""
+        You are a research synthesis expert tasked with creating a comprehensive summary
+        based on the following query and search results:
+
+        QUERY: {query}
+
+        SEARCH RESULTS:
+        {search_results}
+
+        Please synthesize the information into a cohesive summary that addresses the query.
+        Your synthesis should be well-structured and include:
+
+        1. A comprehensive summary of the key information
+        2. Important entities mentioned in the sources, categorized by type (people, organizations, locations, concepts, etc.)
+        3. Relevant tags for this research
+
+        Format your response as follows:
+
+        [Summary of findings]
+
+        Entities:
+        People: [List people]
+        Organizations: [List organizations]
+        Locations: [List locations]
+        Concepts: [List concepts]
+        [Any other relevant entity categories]
+
+        Tags: [comma-separated list of relevant tags]
+
+        Be objective, accurate, and focused on the query.
+        """,
+        tags=["agent", "researcher", "synthesis"],
+        metadata={"agent": "researcher", "task": "synthesize"}
+    )
 
 def _load_contentmind_components(editor: ComponentEditor) -> None:
     """Load components used by the ContentMind agent."""

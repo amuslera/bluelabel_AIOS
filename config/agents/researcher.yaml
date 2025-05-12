@@ -1,0 +1,29 @@
+# Researcher agent configuration
+id: researcher
+name: Researcher
+description: "Agent for conducting research and synthesizing information from multiple sources"
+version: "1.0.0"
+
+# Supported content types
+supported_content_types:
+  - query
+  - text
+
+# Features
+features:
+  - information_search
+  - research_synthesis
+  - entity_identification
+  - content_summarization
+
+# Processing options
+processing:
+  max_result_length: 1500
+  search_depth: 3
+  include_sources: true
+  extract_entities: true
+
+# Default provider preferences
+default_provider_preferences:
+  research: null  # Auto-select
+  synthesis: null  # Auto-select

@@ -12,13 +12,15 @@ import re
 
 # Set Streamlit page configuration
 st.set_page_config(
-    page_title="Bluelabel AIOS - ContentMind",
+    page_title="Bluelabel AIOS",
     page_icon="🧠",
     layout="wide"
 )
 
-# Define API endpoint (FastAPI running on port 8080)
-API_ENDPOINT = "http://localhost:8080"
+# Define API endpoint (FastAPI running on port 8080 by default)
+# You can override this with an environment variable for different environments
+import os
+API_ENDPOINT = os.environ.get("API_ENDPOINT", "http://localhost:8080")
 
 # Define content type icons and colors
 CONTENT_TYPE_ICONS = {
@@ -26,7 +28,9 @@ CONTENT_TYPE_ICONS = {
     "pdf": "📄",
     "text": "📝",
     "audio": "🔊",
-    "social": "📱"
+    "social": "📱",
+    "query": "❓",
+    "research": "🔍"
 }
 
 CONTENT_TYPE_COLORS = {
@@ -34,7 +38,9 @@ CONTENT_TYPE_COLORS = {
     "pdf": "#f5d5cb",    # Light coral
     "text": "#d5f5d5",   # Light green
     "audio": "#e6d9f2",  # Light purple
-    "social": "#fce8c5"  # Light orange
+    "social": "#fce8c5", # Light orange
+    "query": "#e0e0e0",  # Light gray
+    "research": "#d4f0f0" # Light cyan
 }
 
 # Cache for tag suggestions
@@ -103,7 +109,7 @@ def tag_selector(label, default=""):
     return ", ".join(current_tags)
 
 def main():
-    st.title("Bluelabel AIOS - ContentMind")
+    st.title("Bluelabel AIOS")
     
     # Initialize session state for page navigation
     if 'page' not in st.session_state:
@@ -174,8 +180,53 @@ def update_content_type():
     """Updates session state when content type changes"""
     st.session_state.content_type = st.session_state.content_type_selector
 
+def get_available_agents():
+    """Get list of available agents from the API"""
+    try:
+        response = requests.get(f"{API_ENDPOINT}/agents")
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("status") == "success":
+                return result.get("agent_types", [])
+    except Exception as e:
+        pass
+    return []
+
 def process_content_page():
     st.header("Process New Content")
+
+    # Get available agents
+    available_agents = get_available_agents()
+
+    # If we have multiple agents, show an agent selector
+    selected_agent = None
+    if len(available_agents) > 1:
+        # Create a container for the agent selector with radio buttons
+        agent_container = st.container()
+        with agent_container:
+            st.write("Select Agent:")
+            agent_cols = st.columns(len(available_agents))
+            for i, agent in enumerate(available_agents):
+                with agent_cols[i]:
+                    # Use checkbox to create a toggle button effect
+                    is_selected = st.checkbox(
+                        f"{agent.get('name', agent.get('id'))}",
+                        value=(i == 0),  # Default to first agent
+                        key=f"agent_select_{agent.get('id')}"
+                    )
+                    if is_selected:
+                        selected_agent = agent
+
+                    # Show agent description on hover
+                    description = agent.get('description', 'No description available')
+                    st.caption(f"{description[:50]}..." if len(description) > 50 else description)
+    else:
+        # If only one agent, use it by default
+        selected_agent = available_agents[0] if available_agents else {
+            "id": "contentmind",
+            "name": "ContentMind",
+            "supported_content_types": ["url", "pdf", "text", "audio", "social"]
+        }
     
     # Get current provider preferences
     try:
@@ -220,16 +271,29 @@ def process_content_page():
     }
     
     # Content type selector OUTSIDE the form for immediate refresh
+    # Use the selected agent's supported content types if available
+    supported_content_types = selected_agent.get("supported_content_types", ["url", "text", "pdf", "audio", "social"])
+
+    # Ensure content_type is in supported_content_types
+    if st.session_state.content_type not in supported_content_types and supported_content_types:
+        st.session_state.content_type = supported_content_types[0]
+
     st.selectbox(
         "Content Type",
-        ["url", "text", "pdf", "audio", "social"],
-        index=["url", "text", "pdf", "audio", "social"].index(st.session_state.content_type) if st.session_state.content_type in ["url", "text", "pdf", "audio", "social"] else 0,
+        supported_content_types,
+        index=supported_content_types.index(st.session_state.content_type) if st.session_state.content_type in supported_content_types else 0,
         key="content_type_selector",
         on_change=update_content_type
     )
     
     # Content input based on selected type
     content_type = st.session_state.content_type
+
+    # Special case for researcher agent - add query if needed
+    if selected_agent and selected_agent.get("id") == "researcher" and "query" not in supported_content_types:
+        if st.session_state.content_type not in ["query", "text"]:
+            st.session_state.content_type = "query"
+            content_type = "query"
     
     # Initialize variables for different content types
     content = None
@@ -243,6 +307,23 @@ def process_content_page():
         if content_type == "url":
             content = st.text_input("URL", "https://example.com")
             
+        elif content_type == "query":
+            content = st.text_area("Research Query", "Enter your research question or topic...", height=200)
+            # Make sure we don't send the placeholder text
+            if content == "Enter your research question or topic...":
+                content = ""
+
+            # Add some helpful examples
+            with st.expander("Research Query Examples", expanded=False):
+                st.markdown("""
+                **Example research queries:**
+                - What are the main approaches to large language model alignment?
+                - Explain the differences between supervised learning and reinforcement learning
+                - What are the environmental impacts of lithium mining for EV batteries?
+                - How do quantum computing algorithms differ from classical algorithms?
+                - What are the most effective strategies for reducing carbon emissions?
+                """)
+
         elif content_type == "text":
             content = st.text_area("Text Content", "Paste your text here...", height=300)
             # Make sure we don't send the placeholder text
@@ -388,7 +469,8 @@ def process_content_page():
                     api_json = {
                         "content_type": content_type,
                         "content": content,
-                        "provider_preferences": provider_preferences
+                        "provider_preferences": provider_preferences,
+                        "agent_id": selected_agent.get("id", "contentmind")
                     }
                     
                     # Add metadata for text content if provided
@@ -426,9 +508,11 @@ def process_content_page():
                             api_json["metadata"]["suggested_tags"] = tags_list
 
                     # Make the API request
-                    with st.spinner(f"Processing {content_type} content..."):
+                    agent_id = selected_agent.get("id", "contentmind")
+                    agent_name = selected_agent.get("name", agent_id)
+                    with st.spinner(f"Processing {content_type} content with {agent_name} agent..."):
                         response = requests.post(
-                            f"{API_ENDPOINT}/agents/contentmind/process",
+                            f"{API_ENDPOINT}/agents/{agent_id}/process",
                             json=api_json
                         )
                         
@@ -446,7 +530,7 @@ def process_content_page():
                 st.warning("Please provide content to process.")
 
 def display_processing_result(result):
-    """Display content processing result"""
+    """Display content processing result for any agent"""
     if result.get("status") == "success":
         # Check if fallback was used
         fallback_used = False
@@ -481,6 +565,19 @@ def display_processing_result(result):
                 st.experimental_rerun()
         elif storage_info.get("error"):
             st.warning(f"Content could not be stored: {storage_info.get('error')}")
+
+        # Display agent-specific information
+        agent_type = None
+        if "content_type" in result and result["content_type"] == "research":
+            agent_type = "researcher"
+
+        if agent_type == "researcher":
+            st.info("Research results provided by the Researcher agent")
+
+            # Special display for researcher results
+            if "providers_used" in result and "research" in result["providers_used"]:
+                st.write(f"Research provider: {result['providers_used']['research']}")
+                st.write(f"Synthesis provider: {result['providers_used'].get('synthesis', 'N/A')}")
 
         # Processing Result container
         st.header("Processing Result")
@@ -1479,6 +1576,41 @@ def search_page():
 def dashboard_page():
     """Dashboard with insights and analytics about the knowledge repository"""
     st.header("Knowledge Dashboard")
+
+    # Add system information
+    with st.expander("System Information", expanded=True):
+        # Get available agents
+        available_agents = get_available_agents()
+
+        # Display agent information
+        st.subheader("Available Agents")
+
+        agent_cols = st.columns(min(3, len(available_agents)))
+        for i, agent in enumerate(available_agents):
+            with agent_cols[i % 3]:
+                st.markdown(f"**{agent.get('name', agent.get('id'))}**")
+
+                # Agent description
+                description = agent.get('description', 'No description available')
+                st.caption(description)
+
+                # Content types
+                content_types = agent.get('supported_content_types', [])
+                if content_types:
+                    ct_list = ", ".join([f"`{ct}`" for ct in content_types])
+                    st.markdown(f"**Supports:** {ct_list}")
+
+                # Features
+                features = agent.get('features', [])
+                if features:
+                    st.markdown("**Features:**")
+                    for feature in features[:3]:  # Show up to 3 features
+                        st.markdown(f"- {feature.replace('_', ' ').title()}")
+
+                    if len(features) > 3:
+                        st.caption(f"...and {len(features) - 3} more features")
+
+                st.markdown("---")
     
     # Fetch all content for analytics
     try:
@@ -1692,6 +1824,9 @@ def settings_page():
         current_local_llm = os.getenv("LOCAL_LLM_ENABLED", "false").lower() == "true"
         current_local_model = os.getenv("LOCAL_LLM_MODEL", "llama3")
         current_cloud_provider = "OpenAI" if os.getenv("OPENAI_API_KEY") else "Anthropic"
+
+        # Get agent information
+        available_agents = get_available_agents()
     except Exception as e:
         st.warning(f"Could not fetch current settings: {str(e)}")
         current_local_llm = False
@@ -1807,6 +1942,31 @@ def settings_page():
     with app_settings_tab:
         # Application settings
         st.subheader("Content Processing Settings")
+
+        # Agent Settings
+        st.subheader("Agent Settings")
+
+        if available_agents:
+            default_agent = st.selectbox(
+                "Default Agent",
+                [agent.get("name", agent.get("id")) for agent in available_agents],
+                index=0
+            )
+
+            # Show capabilities of selected agent
+            selected_idx = [agent.get("name", agent.get("id")) for agent in available_agents].index(default_agent)
+            agent = available_agents[selected_idx]
+
+            # Show supported content types
+            st.markdown(f"**Supported Content Types:** {', '.join(agent.get('supported_content_types', []))}")
+
+            # Show features
+            if agent.get("features"):
+                st.markdown("**Features:**")
+                features_html = "<ul>" + "".join([f"<li>{feature.replace('_', ' ').title()}</li>" for feature in agent.get("features", [])]) + "</ul>"
+                st.markdown(features_html, unsafe_allow_html=True)
+        else:
+            st.warning("No agents available")
         
         # Content type settings
         st.write("Configure default behavior for content processing:")
@@ -1874,7 +2034,7 @@ def settings_page():
         # In a real app, we would save these settings to a configuration file or database
         # For now, we'll just show a success message
         st.success("Settings saved! Note: In a production environment, these settings would be persisted.")
-        
+
         # Show what would be saved
         settings_data = {
             "LLM_SETTINGS": {
@@ -1882,6 +2042,9 @@ def settings_page():
                 "LOCAL_LLM_MODEL": local_model if use_local_llm else None,
                 "CLOUD_PROVIDER": cloud_provider,
                 "CLOUD_MODEL": model
+            },
+            "AGENT_SETTINGS": {
+                "DEFAULT_AGENT": default_agent if 'default_agent' in locals() else "ContentMind"
             },
             "CONTENT_SETTINGS": {
                 "MAX_CONTENT_LENGTH": max_content_length,
