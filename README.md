@@ -1,20 +1,25 @@
-# Bluelabel AIOS - ContentMind
+# Bluelabel AIOS - Extensible Agent Framework
 
 ## Project Overview
 
 Bluelabel AIOS (Agentic Intelligence Operating System) is an agent-based AI framework designed to help knowledge workers and creators operate with more clarity, speed, and strategic leverage. The system combines modular AI agents, a structured knowledge repository, and a flexible processing architecture to manage information workflows.
 
-This repository contains the implementation of Bluelabel AIOS's first agent: **ContentMind**, which processes, organizes, and synthesizes multi-format content from articles, PDFs, podcasts, and more - transforming your "read/watch/listen later" backlog into an organized knowledge resource.
+This repository contains the implementation of Bluelabel AIOS's extensible agent framework with two initial agents:
+
+1. **ContentMind**: Processes, organizes, and synthesizes multi-format content from articles, PDFs, podcasts, and more - transforming your "read/watch/listen later" backlog into an organized knowledge resource.
+
+2. **Researcher**: Conducts research on topics and synthesizes information from multiple sources, providing comprehensive answers to research queries.
 
 ## Architecture
 
 ### Agent-Based Framework
 
-Bluelabel AIOS is built on a modular agent architecture where:
+Bluelabel AIOS is built on a modular, extensible agent architecture where:
 
 - Each capability is implemented as a specialized agent
 - Agents share common infrastructure and knowledge
-- New agents can be added to extend system capabilities
+- New agents can be easily added to extend system capabilities
+- Dynamic agent discovery and configuration through YAML files
 - Agents can collaborate to solve complex tasks
 
 ```
@@ -30,28 +35,29 @@ Bluelabel AIOS is built on a modular agent architecture where:
 │                                                                     │
 └─────────────────────────────────────┬───────────────────────────────┘
                                       │
-            ┌────────────────────────┬┴───────────────────────┐
-            │                        │                        │
-            ▼                        ▼                        ▼
-┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│                     │    │                     │    │                     │
-│    ContentMind      │    │    Future Agent     │    │    Future Agent     │
-│       Agent         │    │        #2           │    │        #3           │
-│                     │    │                     │    │                     │
-└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+            ┌────────────────────────┬┴───────────────────────┬────────────────────────┐
+            │                        │                        │                        │
+            ▼                        ▼                        ▼                        ▼
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│                     │    │                     │    │                     │    │                     │
+│    ContentMind      │    │    Researcher       │    │    Gateway          │    │    Future Agents    │
+│       Agent         │    │       Agent         │    │       Agent         │    │                     │
+│                     │    │                     │    │                     │    │                     │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
 ```
 
 ### Core Components
 
 The system consists of these main components:
 
-1. **Agent Framework** - Base classes and interfaces for all agents
-2. **Knowledge Repository** - Structured storage for processed information
-3. **Model Router** - Intelligent routing between local and cloud LLMs
-4. **Processing Pipeline** - Content extraction and analysis workflows
-5. **Multi-Component Prompting (MCP)** - Framework for reusable prompt templates
-6. **Communication Gateways** - Email and messaging integrations for content submission
-7. **User Interface** - Streamlit-based interface for agent interaction
+1. **Agent Framework** - Base classes, interfaces, and registry for all agents
+2. **Agent Registry** - Dynamic discovery and management of agent implementations
+3. **Knowledge Repository** - Structured storage for processed information
+4. **Model Router** - Intelligent routing between local and cloud LLMs
+5. **Processing Pipeline** - Content extraction and analysis workflows
+6. **Multi-Component Prompting (MCP)** - Framework for reusable prompt templates
+7. **Communication Gateways** - Email and messaging integrations for content submission
+8. **User Interface** - Streamlit-based interface for agent interaction
 
 ### Multi-Component Prompting (MCP) Framework
 
@@ -184,9 +190,11 @@ The system uses a hybrid approach to language model processing:
 - **Intelligent Routing** - Automatic selection based on task requirements
 - **Remote Access** - Secure access to local models when away from home
 
-## Initial Agent: ContentMind
+## Implemented Agents
 
-The first agent implementation focuses on knowledge management and content processing:
+### ContentMind Agent
+
+The ContentMind agent focuses on knowledge management and content processing:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -236,7 +244,7 @@ The first agent implementation focuses on knowledge management and content proce
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Capabilities
+### ContentMind Capabilities
 
 - Processes content from URLs, PDFs, text, and audio files
 - Extracts key insights, entities, and relationships
@@ -246,22 +254,79 @@ The first agent implementation focuses on knowledge management and content proce
 - Supports automated content submission via email and WhatsApp
 - Offers flexible communication gateways for multi-channel input
 
-### Content Types Supported
+### Researcher Agent
 
-- Web articles (via URL extraction)
-- PDF documents (reports, papers, presentations)
-- Plain text and HTML content
-- Audio content (podcasts, recorded notes)
-- Social media content (threads, posts)
+The Researcher agent focuses on conducting research and synthesizing information:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Researcher Agent                              │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                     Research Processing                      │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Query       │  │ Information    │  │ Source           │  │    │
+│  │  │ Analysis    │  │ Retrieval      │  │ Evaluation       │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Synthesis Processing                      │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Information │  │ Entity         │  │ Relationship     │  │    │
+│  │  │ Integration │  │ Extraction     │  │ Mapping          │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐                       │    │
+│  │  │ Insight     │  │ Response       │                       │    │
+│  │  │ Generation  │  │ Formatting     │                       │    │
+│  │  └─────────────┘  └────────────────┘                       │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Researcher Capabilities
+
+- Processes research queries and information requests
+- Searches for relevant information across multiple sources
+- Synthesizes information into comprehensive summaries
+- Extracts entities and relationships from research findings
+- Organizes results with citations and source attribution
+- Provides structured responses with main findings and insights
+
+### Supported Content Types
+
+- **ContentMind Agent**:
+  - Web articles (via URL extraction)
+  - PDF documents (reports, papers, presentations)
+  - Plain text and HTML content
+  - Audio content (podcasts, recorded notes)
+  - Social media content (threads, posts)
+
+- **Researcher Agent**:
+  - Research queries (text-based questions)
+  - Text content for analysis and synthesis
 
 ### Use Cases
 
-- Research for writing projects, blog posts, or books
-- Exploring new topics and identifying patterns across sources
-- Preparing for content creation or speaking engagements
-- Tracking developments in areas of interest
-- Supporting investment research and decision-making
-- Identifying trends and opportunities across disciplines
+- **ContentMind Agent**:
+  - Organizing "read/watch/listen later" content into a knowledge base
+  - Preparing for content creation or speaking engagements
+  - Tracking developments in areas of interest
+  - Supporting investment research and decision-making
+  - Identifying trends and opportunities across disciplines
+
+- **Researcher Agent**:
+  - Conducting in-depth research on specific topics
+  - Answering complex questions with synthesized information
+  - Exploring new topics and identifying patterns across sources
+  - Supporting decision-making with comprehensive analysis
+  - Building knowledge bases on specific domains
 
 ## Deployment Architecture
 

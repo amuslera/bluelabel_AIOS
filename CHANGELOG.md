@@ -3,6 +3,13 @@
 This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
 
 ## [Unreleased]
+- Implemented agent extensibility framework for adding new agent types
+- Created researcher agent with search and synthesis capabilities
+- Added YAML-based configuration system for agents
+- Enhanced agent registry with dynamic discovery and instantiation
+- Modified UI to support multiple agent types with dynamic content handling
+- Added documentation for creating new agents
+- Added unit tests for the extensibility framework
 - Fixed FastAPI route ordering for knowledge repository endpoints
 - Added unique keys to Streamlit multiselect components to prevent duplicate ID errors
 - Increased minimum height of text_area elements to meet Streamlit requirements
@@ -23,6 +30,24 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
 - Implemented enhanced prompt versioning with diff visualization
 - Added prompt testing capabilities with live LLM integration
 - Created detailed documentation for prompt management system
+- Fixed formatting issues in prompt management CLI for test-render and test-llm commands
+- Enhanced error handling and user feedback in prompt management tools
+- Improved response parsing for more consistent output display
+- Added robust validation for component templates with detailed error messages
+- Implemented comprehensive missing input detection and reporting
+- Added helpful suggestions for common error scenarios in CLI tools
+- Enhanced template rendering with better edge case handling
+- Improved validation of component metadata for higher quality components
+- Enhanced version history visualization with detailed summaries and metrics
+- Improved version comparison with better diff highlighting and change detection
+- Added comprehensive version restoration workflow with safety checks
+- Enhanced component version viewing with related version information
+- Added command suggestions and tips throughout the prompt management UI
+- Implemented prompt quality analysis with actionable improvement suggestions
+- Added comprehensive prompt engineering best practices documentation
+- Created template validation with detailed structural analysis
+- Added template examples for different task types
+- Enhanced prompt testing and validation capabilities
 
 ## Version History
 
