@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Server management script for Bluelabel AIOS.
-This script starts both the FastAPI server and Streamlit UI with proper configuration.
+Server management script for BlueAbel AIOS.
+This script starts both the FastAPI server and Flask UI with proper configuration.
 """
 
 import json
@@ -46,32 +46,6 @@ def load_config():
         logger.error(f"Error loading configuration: {str(e)}")
         print(f"Error: {str(e)}")
         sys.exit(1)
-
-def update_streamlit_config(ui_config):
-    """Update the Streamlit configuration file"""
-    home_dir = Path.home()
-    streamlit_config_dir = home_dir / ".streamlit"
-    streamlit_config_path = streamlit_config_dir / "config.toml"
-    
-    # Create directory if it doesn't exist
-    if not streamlit_config_dir.exists():
-        streamlit_config_dir.mkdir(parents=True)
-    
-    # Create or update config.toml
-    with open(streamlit_config_path, "w") as f:
-        f.write(f"""
-[server]
-port = {ui_config.get("port", 8502)}
-headless = false
-enableCORS = {str(ui_config.get("allow_cors", True)).lower()}
-enableXsrfProtection = true
-
-[browser]
-serverAddress = "{ui_config.get("host", "127.0.0.1")}"
-gatherUsageStats = false
-        """)
-    
-    logger.info(f"Updated Streamlit configuration at {streamlit_config_path}")
 
 def start_api_server(api_config):
     """Start the FastAPI server"""
@@ -119,14 +93,17 @@ def start_api_server(api_config):
         sys.exit(1)
 
 def start_ui_server(ui_config):
-    """Start the Streamlit UI server"""
-    logger.info("Starting UI server...")
+    """Start the Flask UI server"""
+    logger.info("Starting Flask UI server...")
     
-    # Update Streamlit configuration
-    update_streamlit_config(ui_config)
+    # Get Flask configuration
+    flask_config = ui_config.get("flask", {})
+    flask_port = flask_config.get("port", 8080)
+    flask_host = flask_config.get("host", "127.0.0.1")
+    flask_debug = flask_config.get("debug", True)
     
-    # Use the completely new UI implementation
-    ui_path = Path(__file__).parent / "new_ui" / "app.py"
+    # Use the Flask UI implementation
+    ui_path = Path(__file__).parent / "run_flask_ui.py"
     
     if not ui_path.exists():
         logger.error(f"UI file not found: {ui_path}")
@@ -135,9 +112,8 @@ def start_ui_server(ui_config):
         sys.exit(1)
     
     cmd = [
-        "python3", "-m", "streamlit", "run", str(ui_path),
-        "--server.port", str(ui_config.get("port", 8502)),
-        "--server.address", ui_config.get("host", "127.0.0.1")
+        "python3", str(ui_path),
+        "--port", str(flask_port)
     ]
     
     try:
@@ -158,7 +134,7 @@ def start_ui_server(ui_config):
             line = process.stdout.readline()
             if line:
                 logger.info(f"UI: {line.strip()}")
-            if "You can now view your Streamlit app in your browser" in line:
+            if "Running on" in line:
                 break
             time.sleep(0.1)
         
@@ -184,7 +160,7 @@ def cleanup():
 
 def main():
     """Main function to start servers"""
-    parser = argparse.ArgumentParser(description="Start Bluelabel AIOS servers")
+    parser = argparse.ArgumentParser(description="Start BlueAbel AIOS servers")
     parser.add_argument("--api-only", action="store_true", help="Start only the API server")
     parser.add_argument("--ui-only", action="store_true", help="Start only the UI server")
     args = parser.parse_args()
@@ -210,7 +186,7 @@ def main():
                 time.sleep(2)
             
             ui_process = start_ui_server(config["ui"])
-            print(f"UI server running at http://{config['ui']['host']}:{config['ui']['port']}")
+            print(f"UI server running at http://{config['ui']['flask']['host']}:{config['ui']['flask']['port']}")
         
         print("\nPress Ctrl+C to stop servers\n")
         

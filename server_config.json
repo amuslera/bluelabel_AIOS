@@ -9,7 +9,20 @@
     "host": "127.0.0.1",
     "port": 9002,
     "allow_cors": true,
-    "use_watchdog": true
+    "use_watchdog": true,
+    "type": "flask",
+    "flask": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 8080,
+      "debug": true
+    },
+    "streamlit": {
+      "enabled": false,
+      "host": "127.0.0.1",
+      "port": 8501,
+      "use_improved_ui": false
+    }
   },
   "vector_store": {
     "persist_directory": "app/db/vector_db",
