@@ -3,6 +3,13 @@
 This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
 
 ## [Unreleased]
+- Migrated the UI from Streamlit to Flask for improved customization and stability
+- Fixed duplicate navigation issues in the UI completely with a proper Flask implementation
+- Implemented proper Flask routes for all main features (dashboard, content processing, component management)
+- Created clean HTML templates with Jinja2 inheritance structure
+- Added AJAX capabilities for smoother user interactions without page reloads
+- Improved error handling with proper feedback mechanisms
+- Enhanced session management with Flask-based solution
 - Fixed Gateway agent email processing and routing to Researcher agent for research queries
 - Ensured Researcher agent always provides a model parameter to LLM (fixes OpenAI API errors)
 - Improved debug logging in Gateway and Researcher agents for easier troubleshooting
@@ -55,129 +62,27 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
 
 ## Version History
 
-### v0.1.0 - Initial Setup (commit: 5950f80)
-**Date**: Initial commit
+### v0.7.0 - UI Modernization with Flask (commit: pending)
+**Date**: May 2025
 
 **Features**:
-- Basic FastAPI application structure
-- Agent system foundation
-- Project scaffolding
+- Replaced Streamlit UI with a custom Flask implementation
+- Resolved UI inconsistencies and duplicate navigation issues permanently
+- Improved user interface with modern web technologies
+- Enhanced component management interface
+- Better session handling and state management
+- Improved responsiveness and interaction for content processing
 
-**Status**: Proof of concept with minimal functionality.
-
-**Issues**:
-- No content processors implemented
-- No UI components
-- Missing database integration
-
-**Next Steps**:
-- Implement basic UI with Streamlit
-- Create first agent implementation
-- Add initial content processor
-
----
-
-### v0.2.0 - Agent Framework (commit: 471261d)
-**Date**: After initial commit
-
-**Features**:
-- ContentMind agent implementation
-- Model router for LLM integration
-- Initial LLM support
-
-**Status**: Basic framework established but limited functionality.
+**Status**: UI framework completely redesigned with Flask, pending API integration.
 
 **Issues**:
-- Limited content type support
-- No database or storage solution
-- Poor error handling
+- API integration with Flask UI is still using mock data
+- OAuth implementation needs to be connected to backend
 
 **Next Steps**:
-- Enhance Anthropic model selection with dynamic discovery
-- Implement URL content processor
-- Add basic storage capabilities
-
----
-
-### v0.3.0 - Improved Model Selection (commit: b85efe5)
-**Date**: After agent framework
-
-**Features**:
-- Enhanced Anthropic model selection with dynamic discovery
-- Improved error handling
-- Better model router implementation
-
-**Status**: Framework with basic content processing capabilities.
-
-**Issues**:
-- Limited model availability checking
-- No fallback mechanism for offline models
-- Missing content types (PDF, audio)
-
-**Next Steps**:
-- Implement robust local LLM integration
-- Add support for more content types
-- Improve UI error handling
-
----
-
-### v0.4.0 - Robust LLM Integration (commit: 8bc811b)
-**Date**: After model selection improvements
-
-**Features**:
-- Robust local LLM integration
-- Auto-pull models when not available
-- Improved Streamlit UI error handling
-
-**Status**: Functional system with basic content processing.
-
-**Issues**:
-- Limited content type support
-- No knowledge repository
-- Minimal UI features
-
-**Next Steps**:
-- Implement PDF and audio processors
-- Add knowledge repository with vector storage
-- Enhance UI with better content display
-
----
-
-### v0.5.0 - Knowledge Repository (commit: c0d09ed)
-**Date**: May 9, 2025
-
-**Features**:
-- PDF processor with metadata extraction
-- Audio processor with Whisper transcription
-- Vector database integration with ChromaDB
-- Knowledge repository with SQLAlchemy
-- Enhanced UI with improved content display
-- Test agent for debugging without LLM dependency
-
-**Status**: Functional knowledge management system with multi-format content support.
-
-**Issues**:
-- LLM timeout when processing content
-- Server management issues (port conflicts)
-- Parameter inconsistencies between layers
-
-**Next Steps**:
-1. **Debugging LLM Integration**:
-   - Add proper timeout handling in LLM requests
-   - Implement fallback mechanisms when LLM is unavailable
-   - Add better error reporting in the UI
-
-2. **Server Management**:
-   - Configure proper process management to avoid port conflicts
-   - Add graceful shutdown and restart capabilities
-   - Consider containerization for more consistent deployment
-
-3. **Add Social Media Processor**:
-   - Implement Twitter/X content extraction
-   - Add LinkedIn post processing
-   - Create unified social media interface
-
----
+- Complete API integration with the Flask UI
+- Implement real data processing for all UI components
+- Finalize OAuth setup and integration with the backend
 
 ### v0.6.0 - Multi-Component Prompting Framework
 **Date**: May 11, 2025
@@ -216,6 +121,120 @@ This document tracks the evolution of the Bluelabel AIOS project, including vers
    - Add visualization of component relationships
    - Create test comparison and optimization tools
 
+### v0.5.0 - Knowledge Repository (commit: c0d09ed)
+**Date**: May 9, 2025
+
+**Features**:
+- PDF processor with metadata extraction
+- Audio processor with Whisper transcription
+- Vector database integration with ChromaDB
+- Knowledge repository with SQLAlchemy
+- Enhanced UI with improved content display
+- Test agent for debugging without LLM dependency
+
+**Status**: Functional knowledge management system with multi-format content support.
+
+**Issues**:
+- LLM timeout when processing content
+- Server management issues (port conflicts)
+- Parameter inconsistencies between layers
+
+**Next Steps**:
+1. **Debugging LLM Integration**:
+   - Add proper timeout handling in LLM requests
+   - Implement fallback mechanisms when LLM is unavailable
+   - Add better error reporting in the UI
+
+2. **Server Management**:
+   - Configure proper process management to avoid port conflicts
+   - Add graceful shutdown and restart capabilities
+   - Consider containerization for more consistent deployment
+
+3. **Add Social Media Processor**:
+   - Implement Twitter/X content extraction
+   - Add LinkedIn post processing
+   - Create unified social media interface
+
+### v0.4.0 - Robust LLM Integration (commit: 8bc811b)
+**Date**: After model selection improvements
+
+**Features**:
+- Robust local LLM integration
+- Auto-pull models when not available
+- Improved Streamlit UI error handling
+
+**Status**: Functional system with basic content processing.
+
+**Issues**:
+- Limited content type support
+- No knowledge repository
+- Minimal UI features
+
+**Next Steps**:
+- Implement PDF and audio processors
+- Add knowledge repository with vector storage
+- Enhance UI with better content display
+
+### v0.3.0 - Improved Model Selection (commit: b85efe5)
+**Date**: After agent framework
+
+**Features**:
+- Enhanced Anthropic model selection with dynamic discovery
+- Improved error handling
+- Better model router implementation
+
+**Status**: Framework with basic content processing capabilities.
+
+**Issues**:
+- Limited model availability checking
+- No fallback mechanism for offline models
+- Missing content types (PDF, audio)
+
+**Next Steps**:
+- Implement robust local LLM integration
+- Add support for more content types
+- Improve UI error handling
+
+### v0.2.0 - Agent Framework (commit: 471261d)
+**Date**: After initial commit
+
+**Features**:
+- ContentMind agent implementation
+- Model router for LLM integration
+- Initial LLM support
+
+**Status**: Basic framework established but limited functionality.
+
+**Issues**:
+- Limited content type support
+- No database or storage solution
+- Poor error handling
+
+**Next Steps**:
+- Enhance Anthropic model selection with dynamic discovery
+- Implement URL content processor
+- Add basic storage capabilities
+
+### v0.1.0 - Initial Setup (commit: 5950f80)
+**Date**: Initial commit
+
+**Features**:
+- Basic FastAPI application structure
+- Agent system foundation
+- Project scaffolding
+
+**Status**: Proof of concept with minimal functionality.
+
+**Issues**:
+- No content processors implemented
+- No UI components
+- Missing database integration
+
+**Next Steps**:
+- Implement basic UI with Streamlit
+- Create first agent implementation
+- Add initial content processor
+
 ## Current Development Status
 
 The system currently provides:
@@ -225,6 +244,9 @@ The system currently provides:
 - Multi-format content browsing and search
 - Hybrid LLM integration (local and cloud)
 - Multi-Component Prompting framework for versioned templates
+- Communication gateways for email and WhatsApp
+- Digest agent for content summarization and delivery
+- New Flask-based UI for improved user experience
 
 Key architectural components:
 - Agent framework for modular content processing
@@ -233,20 +255,26 @@ Key architectural components:
 - Model router for intelligent LLM selection
 - Component registry for prompt management
 - Versioning system for prompt history tracking
+- Flask-based UI with modern web technologies
 
 ## Known Issues
 
-1. **LLM Processing Timeout**:
+1. **Flask UI API Integration**:
+   - Flask UI is using mock data instead of real API integration
+   - Current implementation has commented-out API calls that need to be enabled
+   - Testing with real data flow is required
+
+2. **LLM Processing Timeout**:
    - The system hangs when processing content with LLM integration
    - Likely caused by connection issues with Ollama or timeout configuration
    - Current workaround: Use test agent to bypass LLM processing
 
-2. **Server Management**:
+3. **Server Management**:
    - Port conflicts between restarts
    - Difficult to manage server processes
    - Manual intervention often required
 
-3. **UI Responsiveness**:
+4. **UI Responsiveness**:
    - Long-running tasks block UI
    - Limited feedback during processing
    - No progress indicators
@@ -254,6 +282,7 @@ Key architectural components:
 ## Planned Features
 
 ### Near Term (Next Release)
+- Complete Flask UI API integration
 - Fix LLM timeout issues
 - Add proper error handling and recovery
 - Implement social media content processor
