@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block title %}Component Editor - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Component Editor</h1>
+    <p class="page-description">Create and edit MCP components.</p>
+    <div class="page-actions">
+        <a href="{{ url_for('component_library') }}" class="btn">Back to Component Library</a>
+    </div>
+</div>
+
+<div class="editor-container">
+    <div class="component-metadata-panel">
+        <div class="card">
+            <h3 class="card-title">Component Details</h3>
+            
+            <form id="component-metadata-form">
+                <div class="form-group">
+                    <label for="component-id">Component ID</label>
+                    <input type="text" id="component-id" name="id" value="{{ component.id if component else '' }}" {% if component %}readonly{% endif %} required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="component-name">Name</label>
+                    <input type="text" id="component-name" name="name" value="{{ component.name if component else '' }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="component-type">Type</label>
+                    <select id="component-type" name="type">
+                        <option value="Content Analysis" {% if component and component.type == 'Content Analysis' %}selected{% endif %}>Content Analysis</option>
+                        <option value="Digest Generation" {% if component and component.type == 'Digest Generation' %}selected{% endif %}>Digest Generation</option>
+                        <option value="Extraction" {% if component and component.type == 'Extraction' %}selected{% endif %}>Extraction</option>
+                        <option value="Transformation" {% if component and component.type == 'Transformation' %}selected{% endif %}>Transformation</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="component-description">Description</label>
+                    <textarea id="component-description" name="description" rows="3">{{ component.description if component and component.description else '' }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="component-version">Version</label>
+                    <input type="text" id="component-version" name="version" value="{{ component.version if component else '1.0' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="component-model">Default Model</label>
+                    <select id="component-model" name="model">
+                        <option value="Auto">Auto-select</option>
+                        <option value="GPT-4">GPT-4</option>
+                        <option value="Claude 3">Claude 3</option>
+                        <option value="Llama 3">Llama 3</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card mt-20">
+            <h3 class="card-title">Parameters</h3>
+            
+            <div class="parameters-container">
+                <div id="parameters-list">
+                    <!-- Parameters will be added dynamically -->
+                    <div class="parameter-item">
+                        <input type="text" class="parameter-name" placeholder="Parameter name" value="input">
+                        <select class="parameter-type">
+                            <option value="string" selected>String</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">Boolean</option>
+                            <option value="array">Array</option>
+                        </select>
+                        <div class="checkbox-group">
+                            <input type="checkbox" class="parameter-required" id="param-required-1" checked>
+                            <label for="param-required-1">Required</label>
+                        </div>
+                        <button type="button" class="btn-icon remove-parameter" title="Remove parameter">&times;</button>
+                    </div>
+                    
+                    <div class="parameter-item">
+                        <input type="text" class="parameter-name" placeholder="Parameter name" value="temperature">
+                        <select class="parameter-type">
+                            <option value="string">String</option>
+                            <option value="number" selected>Number</option>
+                            <option value="boolean">Boolean</option>
+                            <option value="array">Array</option>
+                        </select>
+                        <div class="checkbox-group">
+                            <input type="checkbox" class="parameter-required" id="param-required-2">
+                            <label for="param-required-2">Required</label>
+                        </div>
+                        <button type="button" class="btn-icon remove-parameter" title="Remove parameter">&times;</button>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-small" id="add-parameter">Add Parameter</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="component-content-editor">
+        <div class="card full-height">
+            <div class="card-header">
+                <h3 class="card-title">Component Content</h3>
+                <div class="editor-controls">
+                    <button type="button" class="btn btn-icon" title="Insert Variable" id="insert-variable-btn"></button>
+                    <button type="button" class="btn btn-icon" title="Format Code" id="format-code-btn">⚒️</button>
+                </div>
+            </div>
+            
+            <div class="editor-area">
+                <textarea id="component-content" name="content">{{ component.content if component else '# Component Template\n\nSystem: You are a helpful AI assistant that specializes in analyzing content.\n\nUser: {{input}}\n\nAssistant:' }}</textarea>
+            </div>
+            
+            <div class="card-footer">
+                <div class="editor-actions">
+                    <button type="button" class="btn btn-secondary" id="test-component">Test Component</button>
+                    <button type="button" class="btn btn-primary" id="save-component">Save Component</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variable Selection Modal -->
+<div id="variable-modal" class="modal">
+    <div class="modal-content small-modal">
+        <div class="modal-header">
+            <h2>Insert Variable</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="variable-select">Select Variable</label>
+                <select id="variable-select">
+                    <option value="input">input</option>
+                    <option value="temperature">temperature</option>
+                    <!-- Will be populated from parameters -->
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="insert-variable">Insert</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Component Modal -->
+<div id="test-modal" class="modal">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h2>Test Component</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="test-inputs">
+                <h3>Test Inputs</h3>
+                <div id="test-parameters">
+                    <div class="form-group">
+                        <label for="test-input">input</label>
+                        <textarea id="test-input" rows="3">Sample text to analyze for testing purposes.</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="test-temperature">temperature</label>
+                        <input type="number" id="test-temperature" value="0.7" step="0.1" min="0" max="1">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-results" style="display: none;">
+                <h3>Test Results</h3>
+                <div class="test-output">
+                    <pre id="test-result-output"></pre>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="run-test">Run Test</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .editor-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .full-height {
+        height: calc(100vh - 220px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .card-footer {
+        border-top: 1px solid #eee;
+        padding: 15px 20px;
+        margin-top: auto;
+    }
+    
+    .editor-controls {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .editor-area {
+        flex-grow: 1;
+        position: relative;
+    }
+    
+    #component-content {
+        width: 100%;
+        height: 100%;
+        padding: 15px;
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        border: none;
+        resize: none;
+    }
+    
+    .editor-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .parameter-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .parameter-name {
+        flex: 2;
+    }
+    
+    .parameter-type {
+        flex: 1;
+    }
+    
+    .remove-parameter {
+        color: #e74c3c;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+    
+    .mt-20 {
+        margin-top: 20px;
+    }
+    
+    /* Modal Sizes */
+    .small-modal {
+        max-width: 400px;
+    }
+    
+    .large-modal {
+        max-width: 800px;
+        width: 80%;
+    }
+    
+    .test-inputs, .test-results {
+        margin-bottom: 20px;
+    }
+    
+    .test-output {
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .test-output pre {
+        margin: 0;
+        white-space: pre-wrap;
+    }
+    
+    @media (max-width: 768px) {
+        .editor-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Parameter management
+        const parametersList = document.getElementById('parameters-list');
+        const addParameterBtn = document.getElementById('add-parameter');
+        let paramCounter = document.querySelectorAll('.parameter-item').length + 1;
+        
+        // Add parameter
+        addParameterBtn.addEventListener('click', function() {
+            const newParam = document.createElement('div');
+            newParam.className = 'parameter-item';
+            newParam.innerHTML = `
+                <input type="text" class="parameter-name" placeholder="Parameter name" value="">
+                <select class="parameter-type">
+                    <option value="string" selected>String</option>
+                    <option value="number">Number</option>
+                    <option value="boolean">Boolean</option>
+                    <option value="array">Array</option>
+                </select>
+                <div class="checkbox-group">
+                    <input type="checkbox" class="parameter-required" id="param-required-${paramCounter}">
+                    <label for="param-required-${paramCounter}">Required</label>
+                </div>
+                <button type="button" class="btn-icon remove-parameter" title="Remove parameter">&times;</button>
+            `;
+            parametersList.appendChild(newParam);
+            paramCounter++;
+            
+            // Update variable selection
+            updateVariableSelect();
+        });
+        
+        // Remove parameter
+        parametersList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-parameter')) {
+                e.target.closest('.parameter-item').remove();
+                
+                // Update variable selection
+                updateVariableSelect();
+            }
+        });
+        
+        // Parameter name change
+        parametersList.addEventListener('input', function(e) {
+            if (e.target.classList.contains('parameter-name')) {
+                // Update variable selection
+                updateVariableSelect();
+            }
+        });
+        
+        // Variable modal
+        const variableModal = document.getElementById('variable-modal');
+        const insertVariableBtn = document.getElementById('insert-variable-btn');
+        const closeBtns = document.querySelectorAll('.close, .close-modal');
+        
+        insertVariableBtn.addEventListener('click', function() {
+            variableModal.style.display = 'block';
+        });
+        
+        closeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                variableModal.style.display = 'none';
+                document.getElementById('test-modal').style.display = 'none';
+            });
+        });
+        
+        // Insert variable into editor
+        document.getElementById('insert-variable').addEventListener('click', function() {
+            const variableSelect = document.getElementById('variable-select');
+            const variable = variableSelect.value;
+            const editor = document.getElementById('component-content');
+            
+            // Insert at cursor position or at the end
+            if (editor.selectionStart || editor.selectionStart === 0) {
+                const startPos = editor.selectionStart;
+                const endPos = editor.selectionEnd;
+                editor.value = editor.value.substring(0, startPos) + 
+                              '{{' + variable + '}}' + 
+                              editor.value.substring(endPos, editor.value.length);
+                editor.selectionStart = startPos + variable.length + 4;
+                editor.selectionEnd = startPos + variable.length + 4;
+            } else {
+                editor.value += '{{' + variable + '}}';
+            }
+            
+            editor.focus();
+            variableModal.style.display = 'none';
+        });
+        
+        // Update variable select dropdown
+        function updateVariableSelect() {
+            const variableSelect = document.getElementById('variable-select');
+            const testParameters = document.getElementById('test-parameters');
+            
+            // Clear current options and test parameters
+            variableSelect.innerHTML = '';
+            testParameters.innerHTML = '';
+            
+            // Get all parameter names
+            const paramNames = Array.from(document.querySelectorAll('.parameter-name')).map(input => input.value).filter(name => name.trim() !== '');
+            
+            // Add options to variable select
+            paramNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                variableSelect.appendChild(option);
+                
+                // Add test parameter input
+                const paramType = document.querySelector(`.parameter-name[value="${name}"]`).closest('.parameter-item').querySelector('.parameter-type').value;
+                
+                const paramDiv = document.createElement('div');
+                paramDiv.className = 'form-group';
+                
+                if (paramType === 'string') {
+                    paramDiv.innerHTML = `
+                        <label for="test-${name}">${name}</label>
+                        <textarea id="test-${name}" rows="3">${name === 'input' ? 'Sample text to analyze for testing purposes.' : ''}</textarea>
+                    `;
+                } else if (paramType === 'number') {
+                    paramDiv.innerHTML = `
+                        <label for="test-${name}">${name}</label>
+                        <input type="number" id="test-${name}" value="${name === 'temperature' ? '0.7' : '0'}" step="0.1">
+                    `;
+                } else if (paramType === 'boolean') {
+                    paramDiv.innerHTML = `
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="test-${name}">
+                            <label for="test-${name}">${name}</label>
+                        </div>
+                    `;
+                } else if (paramType === 'array') {
+                    paramDiv.innerHTML = `
+                        <label for="test-${name}">${name} (comma-separated)</label>
+                        <input type="text" id="test-${name}" placeholder="value1, value2, value3">
+                    `;
+                }
+                
+                testParameters.appendChild(paramDiv);
+            });
+        }
+        
+        // Test component
+        document.getElementById('test-component').addEventListener('click', function() {
+            const testModal = document.getElementById('test-modal');
+            testModal.style.display = 'block';
+            
+            // Hide results section
+            document.querySelector('.test-results').style.display = 'none';
+        });
+        
+        // Run test
+        document.getElementById('run-test').addEventListener('click', function() {
+            // Simulating test results
+            setTimeout(() => {
+                document.querySelector('.test-results').style.display = 'block';
+                document.getElementById('test-result-output').textContent = 'Analysis results:\n\nThe provided text appears to be a short test sample. It is likely intended for demonstration purposes of the content analysis system.\n\nKey points:\n- Brief content with no specific subject matter\n- Explicitly mentions "testing purposes"\n- No actionable insights due to generic nature\n\nThis sample is suitable for testing system functionality but does not contain meaningful content for actual analysis.';
+            }, 1000);
+        });
+        
+        // Format code
+        document.getElementById('format-code-btn').addEventListener('click', function() {
+            const editor = document.getElementById('component-content');
+            // Simple indent formatting - would be more sophisticated in a real implementation
+            const formatted = editor.value.split('\n').map(line => {
+                if (line.trim().startsWith('#')) return line;
+                if (line.trim().startsWith('System:')) return '\n' + line;
+                if (line.trim().startsWith('User:')) return '\n' + line;
+                if (line.trim().startsWith('Assistant:')) return '\n' + line;
+                return line;
+            }).join('\n');
+            
+            editor.value = formatted;
+        });
+        
+        // Save component
+        document.getElementById('save-component').addEventListener('click', function() {
+            // Gather component data
+            const componentId = document.getElementById('component-id').value;
+            const componentName = document.getElementById('component-name').value;
+            
+            if (!componentId || !componentName) {
+                alert('Component ID and Name are required.');
+                return;
+            }
+            
+            // In a real implementation, this would send the data to the API
+            alert(`Component "${componentName}" saved successfully.`);
+        });
+        
+        // Initialize variable select
+        updateVariableSelect();
+    });
+</script>
+{% endblock %}

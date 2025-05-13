@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Content Details - {{ content.title }} - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Content Details</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('view_content') }}" class="btn btn-secondary">Back to Content List</a>
+    </div>
+</div>
+
+<div class="content-detail">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="content-title">{{ content.title }}</h2>
+            <div class="content-meta">
+                <span class="badge badge-type">{{ content.type }}</span>
+                <span class="content-date">{{ format_date(content.created_at) }}</span>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="content-section">
+                <h3>Summary</h3>
+                <p>{{ content.summary }}</p>
+            </div>
+            
+            <div class="content-section">
+                <h3>Source</h3>
+                {% if content.type == 'url' %}
+                <a href="{{ content.source }}" target="_blank" class="source-link">{{ content.source }}</a>
+                {% else %}
+                <p>{{ content.source }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="content-section">
+                <h3>Content</h3>
+                <div class="content-text">
+                    {{ content.content | safe }}
+                </div>
+            </div>
+            
+            {% if content.entities %}
+            <div class="content-section">
+                <h3>Entities</h3>
+                <div class="entity-list">
+                    {% for entity in content.entities %}
+                    <div class="entity-item">
+                        <span class="entity-name">{{ entity.name }}</span>
+                        <span class="entity-type">{{ entity.type }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if content.tags %}
+            <div class="content-section">
+                <h3>Tags</h3>
+                <div class="tag-list">
+                    {% for tag in content.tags %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="card-footer">
+            <div class="content-actions">
+                <a href="#" class="btn btn-secondary" onclick="window.print()">Print</a>
+                <a href="#" class="btn btn-secondary">Export</a>
+                <a href="#" class="btn btn-primary">Generate Digest</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card related-content">
+        <h3 class="card-title">Related Content</h3>
+        <div class="card-body">
+            <p class="empty-state">No related content available.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .content-detail {
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 20px;
+    }
+    
+    .content-title {
+        font-size: 1.8rem;
+        margin-bottom: 10px;
+    }
+    
+    .content-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .content-section {
+        margin-bottom: 30px;
+    }
+    
+    .content-section h3 {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .content-text {
+        line-height: 1.6;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+    }
+    
+    .entity-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .entity-item {
+        background-color: #f0f5ff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .entity-type {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 5px;
+        border-left: 1px solid #ccc;
+        padding-left: 5px;
+    }
+    
+    .source-link {
+        word-break: break-all;
+    }
+    
+    @media (max-width: 768px) {
+        .content-detail {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

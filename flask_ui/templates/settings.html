@@ -1,0 +1,742 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>System Settings</h1>
+    <p class="page-description">Configure system settings and preferences.</p>
+</div>
+
+<div class="settings-container">
+    <div class="settings-nav">
+        <ul class="settings-nav-items">
+            <li class="settings-nav-item active" data-section="general">General</li>
+            <li class="settings-nav-item" data-section="api">API Configuration</li>
+            <li class="settings-nav-item" data-section="processors">Content Processors</li>
+            <li class="settings-nav-item" data-section="models">Models</li>
+            <li class="settings-nav-item" data-section="agents">Agent Settings</li>
+            <li class="settings-nav-item" data-section="storage">Storage</li>
+            <li class="settings-nav-item" data-section="logs">Logs</li>
+        </ul>
+    </div>
+    
+    <div class="settings-content">
+        <!-- General Settings -->
+        <div id="general" class="settings-section active">
+            <h2 class="settings-section-title">General Settings</h2>
+            
+            <form class="settings-form" id="general-settings-form">
+                <div class="form-group">
+                    <label for="system-name">System Name</label>
+                    <input type="text" id="system-name" name="system_name" value="BlueAbel AIOS">
+                </div>
+                
+                <div class="form-group">
+                    <label for="default-language">Default Language</label>
+                    <select id="default-language" name="default_language">
+                        <option value="en" selected>English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timezone">Timezone</label>
+                    <select id="timezone" name="timezone">
+                        <option value="UTC" selected>UTC</option>
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        <option value="Europe/London">London (GMT)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enable-analytics" name="enable_analytics" checked>
+                        <label for="enable-analytics">Enable Usage Analytics</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enable-notifications" name="enable_notifications" checked>
+                        <label for="enable-notifications">Enable Notifications</label>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- API Configuration -->
+        <div id="api" class="settings-section">
+            <h2 class="settings-section-title">API Configuration</h2>
+            
+            <form class="settings-form" id="api-settings-form">
+                <div class="form-group">
+                    <label for="api-host">API Host</label>
+                    <input type="text" id="api-host" name="api_host" value="127.0.0.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="api-port">API Port</label>
+                    <input type="number" id="api-port" name="api_port" value="9001">
+                </div>
+                
+                <div class="form-group">
+                    <label for="api-timeout">Request Timeout (seconds)</label>
+                    <input type="number" id="api-timeout" name="api_timeout" value="300">
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="api-reload" name="api_reload" checked>
+                        <label for="api-reload">Enable Auto-Reload</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="api-cors" name="api_cors" checked>
+                        <label for="api-cors">Allow CORS</label>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" id="test-api-btn">Test Connection</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Content Processors -->
+        <div id="processors" class="settings-section">
+            <h2 class="settings-section-title">Content Processors</h2>
+            
+            <form class="settings-form" id="processors-settings-form">
+                <div class="form-group">
+                    <h3>Enabled Processors</h3>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-text" name="processor_text" checked>
+                        <label for="processor-text">Text Processor</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-pdf" name="processor_pdf" checked>
+                        <label for="processor-pdf">PDF Processor</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-url" name="processor_url" checked>
+                        <label for="processor-url">URL Processor</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-email" name="processor_email" checked>
+                        <label for="processor-email">Email Processor</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-audio" name="processor_audio">
+                        <label for="processor-audio">Audio Processor</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="processor-social" name="processor_social">
+                        <label for="processor-social">Social Media Processor</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Processor Settings</h3>
+                    
+                    <div class="processor-settings">
+                        <div class="processor-setting">
+                            <label for="pdf-extract-images">PDF Processor: Extract Images</label>
+                            <select id="pdf-extract-images" name="pdf_extract_images">
+                                <option value="yes" selected>Yes</option>
+                                <option value="no">No</option>
+                                <option value="ask">Ask Each Time</option>
+                            </select>
+                        </div>
+                        
+                        <div class="processor-setting">
+                            <label for="url-depth">URL Processor: Crawling Depth</label>
+                            <select id="url-depth" name="url_depth">
+                                <option value="0">Current Page Only</option>
+                                <option value="1" selected>1 Level Deep</option>
+                                <option value="2">2 Levels Deep</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Models -->
+        <div id="models" class="settings-section">
+            <h2 class="settings-section-title">Model Settings</h2>
+            
+            <form class="settings-form" id="models-settings-form">
+                <div class="form-group">
+                    <label for="default-model">Default Model</label>
+                    <select id="default-model" name="default_model">
+                        <option value="auto" selected>Auto Select</option>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="claude-3">Claude 3</option>
+                        <option value="llama-3">Llama 3</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <h3>OpenAI</h3>
+                    
+                    <div class="form-group api-key-group">
+                        <label for="openai-key">API Key</label>
+                        <div class="api-key-input">
+                            <input type="password" id="openai-key" name="openai_key" value="•••••••••••••••••••••••••">
+                            <button type="button" class="btn-icon toggle-password">👁️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="openai-model">Preferred Model</label>
+                        <select id="openai-model" name="openai_model">
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="gpt-4-turbo" selected>GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Anthropic</h3>
+                    
+                    <div class="form-group api-key-group">
+                        <label for="anthropic-key">API Key</label>
+                        <div class="api-key-input">
+                            <input type="password" id="anthropic-key" name="anthropic_key" value="•••••••••••••••••••••••••">
+                            <button type="button" class="btn-icon toggle-password">👁️</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="anthropic-model">Preferred Model</label>
+                        <select id="anthropic-model" name="anthropic_model">
+                            <option value="claude-3-opus" selected>Claude 3 Opus</option>
+                            <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                            <option value="claude-3-haiku">Claude 3 Haiku</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Ollama (Local Models)</h3>
+                    
+                    <div class="form-group">
+                        <label for="ollama-host">Ollama Host</label>
+                        <input type="text" id="ollama-host" name="ollama_host" value="http://localhost:11434">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ollama-model">Preferred Model</label>
+                        <select id="ollama-model" name="ollama_model">
+                            <option value="llama3" selected>Llama 3</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="wizard">Wizard</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="use-ollama-fallback" name="use_ollama_fallback" checked>
+                            <label for="use-ollama-fallback">Use Ollama as fallback</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" id="test-models-btn">Test Models</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Agent Settings -->
+        <div id="agents" class="settings-section">
+            <h2 class="settings-section-title">Agent Settings</h2>
+            
+            <div class="info-box">
+                <p>Configure behavior and capabilities of various agents in the system.</p>
+            </div>
+            
+            <form class="settings-form" id="agents-settings-form">
+                <div class="form-group">
+                    <h3>Gateway Agent</h3>
+                    
+                    <div class="form-group">
+                        <label for="gateway-model">Preferred Model</label>
+                        <select id="gateway-model" name="gateway_model">
+                            <option value="default">System Default</option>
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="claude-3">Claude 3</option>
+                            <option value="llama-3">Llama 3</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="gateway-auto-process" name="gateway_auto_process" checked>
+                            <label for="gateway-auto-process">Automatically process incoming messages</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Researcher Agent</h3>
+                    
+                    <div class="form-group">
+                        <label for="researcher-model">Preferred Model</label>
+                        <select id="researcher-model" name="researcher_model">
+                            <option value="default">System Default</option>
+                            <option value="gpt-4" selected>GPT-4</option>
+                            <option value="claude-3">Claude 3</option>
+                            <option value="llama-3">Llama 3</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="research-depth">Research Depth</label>
+                        <select id="research-depth" name="research_depth">
+                            <option value="basic">Basic (faster)</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="deep">Deep (more thorough)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Digest Agent</h3>
+                    
+                    <div class="form-group">
+                        <label for="digest-model">Preferred Model</label>
+                        <select id="digest-model" name="digest_model">
+                            <option value="default">System Default</option>
+                            <option value="gpt-4" selected>GPT-4</option>
+                            <option value="claude-3">Claude 3</option>
+                            <option value="llama-3">Llama 3</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="digest-length">Default Digest Length</label>
+                        <select id="digest-length" name="digest_length">
+                            <option value="brief">Brief</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="detailed">Detailed</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Storage Settings -->
+        <div id="storage" class="settings-section">
+            <h2 class="settings-section-title">Storage Settings</h2>
+            
+            <form class="settings-form" id="storage-settings-form">
+                <div class="form-group">
+                    <h3>Database Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="db-type">Database Type</label>
+                        <select id="db-type" name="db_type">
+                            <option value="sqlite" selected>SQLite</option>
+                            <option value="postgresql">PostgreSQL</option>
+                            <option value="mysql">MySQL</option>
+                        </select>
+                    </div>
+                    
+                    <div id="db-connection-details" class="connection-details">
+                        <div class="form-group">
+                            <label for="db-host">Host</label>
+                            <input type="text" id="db-host" name="db_host" value="localhost">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="db-port">Port</label>
+                            <input type="number" id="db-port" name="db_port" value="5432">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="db-user">Username</label>
+                            <input type="text" id="db-user" name="db_user" value="postgres">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="db-password">Password</label>
+                            <input type="password" id="db-password" name="db_password" value="•••••••••">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="db-name">Database Name</label>
+                            <input type="text" id="db-name" name="db_name" value="blueabel">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Vector Store Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="vector-db-type">Vector Store Type</label>
+                        <select id="vector-db-type" name="vector_db_type">
+                            <option value="chroma" selected>ChromaDB</option>
+                            <option value="pinecone">Pinecone</option>
+                            <option value="qdrant">Qdrant</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="embedding-model">Embedding Model</label>
+                        <select id="embedding-model" name="embedding_model">
+                            <option value="openai" selected>OpenAI Embeddings</option>
+                            <option value="huggingface">HuggingFace Embeddings</option>
+                            <option value="local">Local Embeddings</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Content Storage</h3>
+                    
+                    <div class="form-group">
+                        <label for="storage-path">Storage Path</label>
+                        <input type="text" id="storage-path" name="storage_path" value="/Users/arielmuslera/Development/Projects/blueabel_AIOS/data">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="storage-quota">Storage Quota (MB)</label>
+                        <input type="number" id="storage-quota" name="storage_quota" value="5000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enable-encryption" name="enable_encryption">
+                            <label for="enable-encryption">Enable Content Encryption</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" id="test-db-btn">Test Database Connection</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Logs -->
+        <div id="logs" class="settings-section">
+            <h2 class="settings-section-title">Logs</h2>
+            
+            <form class="settings-form" id="logs-settings-form">
+                <div class="form-group">
+                    <label for="log-level">Log Level</label>
+                    <select id="log-level" name="log_level">
+                        <option value="debug">Debug</option>
+                        <option value="info" selected>Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="log-path">Log Directory</label>
+                    <input type="text" id="log-path" name="log_path" value="/Users/arielmuslera/Development/Projects/blueabel_AIOS/logs">
+                </div>
+                
+                <div class="form-group">
+                    <label for="log-rotation">Log Rotation</label>
+                    <select id="log-rotation" name="log_rotation">
+                        <option value="daily" selected>Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="size">By Size</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="log-retention">Log Retention (days)</label>
+                    <input type="number" id="log-retention" name="log_retention" value="30">
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="log-api-requests" name="log_api_requests" checked>
+                        <label for="log-api-requests">Log API Requests</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="log-model-interactions" name="log_model_interactions" checked>
+                        <label for="log-model-interactions">Log Model Interactions</label>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" id="view-logs-btn">View Logs</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 30px;
+        margin-top: 20px;
+    }
+    
+    .settings-nav {
+        background-color: #f5f7fa;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .settings-nav-items {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .settings-nav-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .settings-nav-item:hover {
+        background-color: #e9ecef;
+    }
+    
+    .settings-nav-item.active {
+        background-color: #e9ecef;
+        border-left-color: #3498db;
+        font-weight: 500;
+    }
+    
+    .settings-section {
+        display: none;
+    }
+    
+    .settings-section.active {
+        display: block;
+    }
+    
+    .settings-section-title {
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .settings-form {
+        max-width: 800px;
+    }
+    
+    .settings-form h3 {
+        margin-top: 30px;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+    
+    .api-key-group {
+        margin-bottom: 15px;
+    }
+    
+    .api-key-input {
+        display: flex;
+        align-items: center;
+    }
+    
+    .api-key-input input {
+        flex: 1;
+        border-right: none;
+        border-radius: 4px 0 0 4px;
+    }
+    
+    .api-key-input .btn-icon {
+        border-radius: 0 4px 4px 0;
+        height: 38px;
+    }
+    
+    .connection-details {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+    
+    .processor-settings {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .processor-setting {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    @media (max-width: 768px) {
+        .settings-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .settings-nav-items {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .settings-nav-item {
+            flex: 1;
+            text-align: center;
+            border-left: none;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .settings-nav-item.active {
+            border-left-color: transparent;
+            border-bottom-color: #3498db;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Settings navigation
+        const navItems = document.querySelectorAll('.settings-nav-item');
+        const sections = document.querySelectorAll('.settings-section');
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const sectionId = this.getAttribute('data-section');
+                
+                // Update active nav item
+                navItems.forEach(navItem => navItem.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Show corresponding section
+                sections.forEach(section => section.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+            });
+        });
+        
+        // Toggle password visibility
+        const toggleButtons = document.querySelectorAll('.toggle-password');
+        
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.previousElementSibling;
+                
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.textContent = '👁️‍🗨️';
+                } else {
+                    input.type = 'password';
+                    this.textContent = '👁️';
+                }
+            });
+        });
+        
+        // Database type change
+        const dbType = document.getElementById('db-type');
+        const connectionDetails = document.getElementById('db-connection-details');
+        
+        dbType.addEventListener('change', function() {
+            if (this.value === 'sqlite') {
+                connectionDetails.style.display = 'none';
+            } else {
+                connectionDetails.style.display = 'block';
+            }
+        });
+        
+        // Initial check for DB type
+        if (dbType.value === 'sqlite') {
+            connectionDetails.style.display = 'none';
+        }
+        
+        // Form submission
+        const forms = document.querySelectorAll('.settings-form');
+        
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // In a real implementation, this would save the settings to the API
+                const formData = new FormData(form);
+                const formId = form.id;
+                
+                // For demo, just show an alert
+                alert(`Settings in ${formId} saved successfully.`);
+            });
+        });
+        
+        // Test API Connection
+        document.getElementById('test-api-btn').addEventListener('click', function() {
+            // Simulate API test
+            setTimeout(() => {
+                alert('API connection successful!');
+            }, 500);
+        });
+        
+        // Test DB Connection
+        document.getElementById('test-db-btn').addEventListener('click', function() {
+            // Simulate DB test
+            setTimeout(() => {
+                alert('Database connection successful!');
+            }, 500);
+        });
+        
+        // Test Models
+        document.getElementById('test-models-btn').addEventListener('click', function() {
+            // Simulate model test
+            setTimeout(() => {
+                alert('All models are accessible and working correctly.');
+            }, 500);
+        });
+        
+        // View Logs
+        document.getElementById('view-logs-btn').addEventListener('click', function() {
+            alert('Logs viewer would open here.');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p class="page-description">Welcome to the BlueAbel AIOS system. This is a Flask-based UI implementation.</p>
+</div>
+
+<div class="info-box">
+    <p><strong>Note:</strong> This is a clean implementation with proper API connectivity.</p>
+</div>
+
+<div class="section">
+    <h2>System Overview</h2>
+    
+    <div class="card-grid">
+        <div class="card">
+            <h3 class="card-title">Content Items</h3>
+            <div class="card-metric">{{ content_count }}</div>
+            <p class="card-subtitle">Total items in repository</p>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">Content Types</h3>
+            <div class="badge-container">
+                {% for type, count in content_types.items() %}
+                <span class="badge badge-blue">{{ type }}: {{ count }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">System Status</h3>
+            <div class="status-display {% if api_status %}status-online{% else %}status-offline{% endif %}">
+                <span class="status-icon">●</span>
+                <span class="status-text">{{ "API Online" if api_status else "API Offline" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Recent Activity</h2>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Action</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in recent_activity %}
+                <tr>
+                    <td>{{ activity.time }}</td>
+                    <td>{{ activity.action }}</td>
+                    <td><span class="badge badge-green">{{ activity.status }}</span></td>
+                    <td>{{ activity.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Recent Content</h2>
+    
+    {% for item in recent_content %}
+    <div class="content-card">
+        <div class="content-card-main">
+            <h3 class="content-card-title">{{ item.title }}</h3>
+            <div class="content-card-meta">
+                <span class="badge badge-type">{{ item.type }}</span>
+                <span class="content-card-date">{{ format_date(item.created_at) }}</span>
+            </div>
+            <p class="content-card-summary">{{ item.summary }}</p>
+            <div class="content-card-tags">
+                {% for tag in item.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="content-card-actions">
+            <a href="{{ url_for('content_detail', content_id=item.id) }}" class="btn">View Details</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No content items available</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // API status check on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        checkApiStatus();
+        
+        // Update API status every 30 seconds
+        setInterval(checkApiStatus, 30000);
+    });
+    
+    function checkApiStatus() {
+        fetch('/api-status')
+            .then(response => response.json())
+            .then(data => {
+                const indicator = document.getElementById('apiStatusIndicator');
+                if (data.status === 'online') {
+                    indicator.innerHTML = '<span class="status-dot online"></span><span class="status-text">Online</span>';
+                } else {
+                    indicator.innerHTML = '<span class="status-dot offline"></span><span class="status-text">Offline</span>';
+                }
+            })
+            .catch(error => {
+                const indicator = document.getElementById('apiStatusIndicator');
+                indicator.innerHTML = '<span class="status-dot offline"></span><span class="status-text">Offline</span>';
+            });
+    }
+</script>
+{% endblock %}

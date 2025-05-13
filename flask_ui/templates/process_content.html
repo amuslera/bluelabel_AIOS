@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Process Content - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Process Content</h1>
+    <p class="page-description">Process new content through the AI pipeline.</p>
+</div>
+
+<div class="tabs">
+    <button class="tab-button active" data-tab="url-tab">URL</button>
+    <button class="tab-button" data-tab="text-tab">Text</button>
+    <button class="tab-button" data-tab="file-tab">File</button>
+    <button class="tab-button" data-tab="email-tab">Email</button>
+</div>
+
+<div class="tab-content-container">
+    <!-- URL Tab -->
+    <div id="url-tab" class="tab-content active">
+        <div class="card">
+            <h3 class="card-title">Process Web Content</h3>
+            
+            <form method="POST" action="{{ url_for('process_content') }}">
+                <input type="hidden" name="content_type" value="url">
+                
+                <div class="form-group">
+                    <label for="url">URL to Process</label>
+                    <input type="text" id="url" name="url" placeholder="https://example.com/article" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="include-images" name="include_images" checked>
+                            <label for="include-images">Include Images</label>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="create-digest" name="create_digest" checked>
+                            <label for="create-digest">Create Digest</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="url-model">Model</label>
+                    <select id="url-model" name="model">
+                        {% for value, name in models.items() %}
+                        <option value="{{ value }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Process URL</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Text Tab -->
+    <div id="text-tab" class="tab-content">
+        <div class="card">
+            <h3 class="card-title">Process Text Content</h3>
+            
+            <form method="POST" action="{{ url_for('process_content') }}">
+                <input type="hidden" name="content_type" value="text">
+                
+                <div class="form-group">
+                    <label for="text-content">Text Content</label>
+                    <textarea id="text-content" name="text" placeholder="Paste your text content here..." required></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="extract-entities" name="extract_entities" checked>
+                            <label for="extract-entities">Extract Entities</label>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="generate-tags" name="generate_tags" checked>
+                            <label for="generate-tags">Generate Tags</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="text-model">Model</label>
+                    <select id="text-model" name="model">
+                        {% for value, name in models.items() %}
+                        <option value="{{ value }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Process Text</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- File Tab -->
+    <div id="file-tab" class="tab-content">
+        <div class="card">
+            <h3 class="card-title">Process File Content</h3>
+            
+            <form method="POST" action="{{ url_for('process_content') }}" enctype="multipart/form-data">
+                <input type="hidden" name="content_type" value="file">
+                
+                <div class="form-group">
+                    <label for="file-type">File Type</label>
+                    <select id="file-type" name="file_type">
+                        <option value="pdf">PDF</option>
+                        <option value="docx">Word Document</option>
+                        <option value="txt">Text File</option>
+                        <option value="xlsx">Spreadsheet</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="file-upload">Select File</label>
+                    <input type="file" id="file-upload" name="file" required>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="summarize-file" name="summarize" checked>
+                        <label for="summarize-file">Generate Summary</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn">Process File</button>
+            </form>
+            
+            <div class="info-box mt-20">
+                <p><strong>Note:</strong> File uploads are currently limited to 10MB.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Email Tab -->
+    <div id="email-tab" class="tab-content">
+        <div class="card">
+            <h3 class="card-title">Process Email Content</h3>
+            
+            <form method="POST" action="{{ url_for('process_content') }}">
+                <input type="hidden" name="content_type" value="email">
+                
+                <div class="form-group">
+                    <label for="email-subject">Email Subject</label>
+                    <input type="text" id="email-subject" name="subject" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email-body">Email Body</label>
+                    <textarea id="email-body" name="body" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="include-attachments" name="include_attachments" checked>
+                        <label for="include-attachments">Process Attachments</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn">Process Email</button>
+            </form>
+            
+            <div class="info-box mt-20">
+                <p><strong>Tip:</strong> For automated email processing, consider using the Gateway Agent with OAuth setup.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Get the tab to show
+                const tabId = this.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and tabs
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                // Add active class to current button and tab
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    });
+</script>
+{% endblock %}

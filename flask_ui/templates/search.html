@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Search - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Search Content</h1>
+    <p class="page-description">Search through your content repository.</p>
+</div>
+
+<div class="search-container">
+    <form method="GET" action="{{ url_for('search') }}" class="search-form">
+        <div class="search-input-group">
+            <input type="text" name="q" id="search-input" placeholder="Search for content..." value="{{ query }}" autofocus>
+            <button type="submit" class="search-button">Search</button>
+        </div>
+        
+        <div class="search-options">
+            <div class="checkbox-group">
+                <input type="checkbox" id="search-title" name="in_title" checked>
+                <label for="search-title">Search in title</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="search-content" name="in_content" checked>
+                <label for="search-content">Search in content</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="search-tags" name="in_tags">
+                <label for="search-tags">Search in tags</label>
+            </div>
+            
+            <div class="form-col">
+                <label for="content-type">Content Type:</label>
+                <select id="content-type" name="type">
+                    <option value="">All Types</option>
+                    <option value="url">URL</option>
+                    <option value="pdf">PDF</option>
+                    <option value="text">Text</option>
+                    <option value="email">Email</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if query %}
+<div class="search-results">
+    <div class="search-results-header">
+        <h2>Search Results for "{{ query }}"</h2>
+        <p class="search-results-count">{{ results|length }} results found</p>
+    </div>
+    
+    {% for item in results %}
+    <div class="search-result-item">
+        <h3 class="search-result-title">
+            <a href="{{ url_for('content_detail', content_id=item.id) }}">{{ item.title }}</a>
+        </h3>
+        <div class="search-result-meta">
+            <span class="badge badge-type">{{ item.type }}</span>
+            <span class="search-result-date">{{ format_date(item.created_at) }}</span>
+            {% if item.relevance %}
+            <span class="search-result-relevance">Relevance: {{ (item.relevance * 100)|int }}%</span>
+            {% endif %}
+        </div>
+        <p class="search-result-summary">{{ item.summary }}</p>
+        <div class="search-result-tags">
+            {% for tag in item.tags %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No results found for "{{ query }}".</p>
+        <p>Try using different keywords or broader search terms.</p>
+    </div>
+    {% endfor %}
+    
+    {% if results|length > 10 %}
+    <div class="pagination">
+        <a href="#" class="pagination-item">&laquo; Previous</a>
+        <span class="pagination-item active">1</span>
+        <a href="#" class="pagination-item">2</a>
+        <a href="#" class="pagination-item">3</a>
+        <a href="#" class="pagination-item">Next &raquo;</a>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="search-tips">
+    <h3>Search Tips</h3>
+    <ul>
+        <li>Use quotation marks for exact phrases: <code>"artificial intelligence"</code></li>
+        <li>Use + to require a term: <code>+machine +learning</code></li>
+        <li>Use - to exclude terms: <code>AI -chatbot</code></li>
+        <li>Use * for wildcard searches: <code>deep*</code> (matches "deep learning", "deep neural networks", etc.)</li>
+        <li>Filter by type using the dropdown menu</li>
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        margin-bottom: 30px;
+    }
+    
+    .search-form {
+        background-color: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .search-input-group {
+        display: flex;
+        margin-bottom: 15px;
+    }
+    
+    #search-input {
+        flex: 1;
+        padding: 12px 15px;
+        font-size: 1.1rem;
+        border: 1px solid #ddd;
+        border-radius: 4px 0 0 4px;
+    }
+    
+    .search-button {
+        padding: 12px 20px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .search-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+    }
+    
+    .search-results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-result-item {
+        margin-bottom: 25px;
+        padding-bottom: 25px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-result-title {
+        margin-bottom: 8px;
+    }
+    
+    .search-result-meta {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .search-result-relevance {
+        color: #666;
+    }
+    
+    .search-result-summary {
+        margin-bottom: 10px;
+    }
+    
+    .search-tips {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    
+    .search-tips h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    .search-tips code {
+        background-color: #eee;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-focus the search input
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.focus();
+        }
+        
+        // Highlight search terms in results
+        if ('{{ query }}') {
+            const terms = '{{ query }}'.split(' ').filter(term => term.length > 2);
+            const results = document.querySelectorAll('.search-result-summary');
+            
+            terms.forEach(term => {
+                results.forEach(result => {
+                    const regex = new RegExp(term, 'gi');
+                    result.innerHTML = result.innerHTML.replace(
+                        regex, 
+                        match => `<mark>${match}</mark>`
+                    );
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BlueAbel AIOS{% endblock %}</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <!-- Additional CSS from specific pages -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">BlueAbel AIOS</h1>
+                <p class="sidebar-subtitle">Content Intelligence System</p>
+            </div>
+            
+            <!-- Navigation Sections -->
+            {% for section, items in nav_items.items() %}
+            <div class="nav-section">
+                <div class="nav-section-title">{{ section }}</div>
+                <ul class="nav-items">
+                    {% for item in items %}
+                    <li class="nav-item">
+                        <a href="{{ url_for(item.route) }}" class="{% if active_page == item.route %}active{% endif %}" title="{{ item.description }}">
+                            <span class="nav-item-icon">{{ item.icon }}</span>
+                            <span class="nav-item-text">{{ item.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+            
+            <!-- API Status Indicator -->
+            <div class="api-status">
+                <span class="api-status-label">API Status:</span>
+                <span class="api-status-indicator" id="apiStatusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Checking...</span>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                            <button type="button" class="alert-close" onclick="this.parentElement.style.display='none'">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- Additional JavaScript from specific pages -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

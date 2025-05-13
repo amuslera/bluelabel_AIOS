@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}View Content - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Content Repository</h1>
+    <p class="page-description">Browse and manage your content items.</p>
+</div>
+
+<div class="filter-controls">
+    <form method="GET" action="{{ url_for('view_content') }}" class="filter-form">
+        <div class="form-row">
+            <div class="form-col">
+                <label for="content-type">Type:</label>
+                <select id="content-type" name="type" onchange="this.form.submit()">
+                    <option value="">All Types</option>
+                    <option value="url" {% if selected_type == 'url' %}selected{% endif %}>URL</option>
+                    <option value="pdf" {% if selected_type == 'pdf' %}selected{% endif %}>PDF</option>
+                    <option value="text" {% if selected_type == 'text' %}selected{% endif %}>Text</option>
+                    <option value="email" {% if selected_type == 'email' %}selected{% endif %}>Email</option>
+                </select>
+            </div>
+            <div class="form-col">
+                <label for="sort-by">Sort By:</label>
+                <select id="sort-by" name="sort" onchange="this.form.submit()">
+                    <option value="date_desc" {% if selected_sort == 'date_desc' %}selected{% endif %}>Newest First</option>
+                    <option value="date_asc" {% if selected_sort == 'date_asc' %}selected{% endif %}>Oldest First</option>
+                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="content-list">
+    {% for item in content_items %}
+    <div class="content-card">
+        <div class="content-card-main">
+            <h3 class="content-card-title">{{ item.title }}</h3>
+            <div class="content-card-meta">
+                <span class="badge badge-type">{{ item.type }}</span>
+                <span class="content-card-date">{{ format_date(item.created_at) }}</span>
+            </div>
+            <p class="content-card-summary">{{ item.summary }}</p>
+            <div class="content-card-tags">
+                {% for tag in item.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="content-card-actions">
+            <a href="{{ url_for('content_detail', content_id=item.id) }}" class="btn">View Details</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No content items found. Try adjusting your filters or adding new content.</p>
+        <a href="{{ url_for('process_content') }}" class="btn btn-primary">Process New Content</a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagination">
+    <a href="#" class="pagination-item">&laquo; Previous</a>
+    <span class="pagination-item active">1</span>
+    <a href="#" class="pagination-item">2</a>
+    <a href="#" class="pagination-item">3</a>
+    <a href="#" class="pagination-item">Next &raquo;</a>
+</div>
+{% endblock %}

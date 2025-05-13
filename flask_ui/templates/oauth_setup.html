@@ -1,0 +1,694 @@
+{% extends "base.html" %}
+
+{% block title %}OAuth Setup - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>OAuth Setup</h1>
+    <p class="page-description">Configure OAuth connections for external services.</p>
+</div>
+
+<div class="oauth-container">
+    <div class="service-cards">
+        <!-- Gmail OAuth -->
+        <div class="service-card">
+            <div class="service-card-header">
+                <div class="service-icon gmail">
+                    <span>📧</span>
+                </div>
+                <h3 class="service-title">Gmail</h3>
+                <div class="service-status connected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+            </div>
+            
+            <div class="service-card-body">
+                <p class="service-description">Connect to Gmail to allow the Gateway Agent to process emails.</p>
+                
+                <div class="connection-details">
+                    <div class="connection-detail">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">user@gmail.com</span>
+                    </div>
+                    <div class="connection-detail">
+                        <span class="detail-label">Connected:</span>
+                        <span class="detail-value">May 10, 2023</span>
+                    </div>
+                    <div class="connection-detail">
+                        <span class="detail-label">Scopes:</span>
+                        <span class="detail-value">gmail.readonly, gmail.labels</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="service-card-actions">
+                <button class="btn btn-secondary" onclick="reconnectService('gmail')">Reconnect</button>
+                <button class="btn btn-danger" onclick="disconnectService('gmail')">Disconnect</button>
+            </div>
+        </div>
+        
+        <!-- Google Drive OAuth -->
+        <div class="service-card">
+            <div class="service-card-header">
+                <div class="service-icon gdrive">
+                    <span>📁</span>
+                </div>
+                <h3 class="service-title">Google Drive</h3>
+                <div class="service-status disconnected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Not Connected</span>
+                </div>
+            </div>
+            
+            <div class="service-card-body">
+                <p class="service-description">Connect to Google Drive to allow processing documents from your Drive.</p>
+                
+                <div class="setup-instructions">
+                    <p>To connect Google Drive:</p>
+                    <ol>
+                        <li>Click the Connect button below</li>
+                        <li>Sign in with your Google account</li>
+                        <li>Allow requested permissions</li>
+                        <li>You will be redirected back to this page</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="service-card-actions">
+                <button class="btn btn-primary" onclick="connectService('gdrive')">Connect</button>
+            </div>
+        </div>
+        
+        <!-- WhatsApp OAuth -->
+        <div class="service-card">
+            <div class="service-card-header">
+                <div class="service-icon whatsapp">
+                    <span>💬</span>
+                </div>
+                <h3 class="service-title">WhatsApp</h3>
+                <div class="service-status disconnected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Not Connected</span>
+                </div>
+            </div>
+            
+            <div class="service-card-body">
+                <p class="service-description">Connect to WhatsApp Business API to process WhatsApp messages.</p>
+                
+                <div class="setup-instructions">
+                    <p>To connect WhatsApp Business API:</p>
+                    <ol>
+                        <li>You need a WhatsApp Business API account</li>
+                        <li>Enter your API credentials below</li>
+                        <li>Click Connect to verify and save</li>
+                    </ol>
+                    
+                    <form class="oauth-credentials-form">
+                        <div class="form-group">
+                            <label for="whatsapp-phone">Phone Number ID</label>
+                            <input type="text" id="whatsapp-phone" name="phone_number_id" placeholder="1234567890">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="whatsapp-token">Access Token</label>
+                            <input type="password" id="whatsapp-token" name="access_token" placeholder="Enter your access token">
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="service-card-actions">
+                <button class="btn btn-primary" onclick="connectWithCredentials('whatsapp')">Connect</button>
+            </div>
+        </div>
+        
+        <!-- Slack OAuth -->
+        <div class="service-card">
+            <div class="service-card-header">
+                <div class="service-icon slack">
+                    <span>🔄</span>
+                </div>
+                <h3 class="service-title">Slack</h3>
+                <div class="service-status disconnected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Not Connected</span>
+                </div>
+            </div>
+            
+            <div class="service-card-body">
+                <p class="service-description">Connect to Slack to allow the Gateway Agent to process Slack messages.</p>
+                
+                <div class="setup-instructions">
+                    <p>To connect Slack:</p>
+                    <ol>
+                        <li>Click the Connect button below</li>
+                        <li>Sign in with your Slack account</li>
+                        <li>Select the workspace to connect</li>
+                        <li>Allow requested permissions</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="service-card-actions">
+                <button class="btn btn-primary" onclick="connectService('slack')">Connect</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="oauth-guide">
+        <div class="card">
+            <h3 class="card-title">OAuth Configuration Guide</h3>
+            
+            <div class="oauth-tabs">
+                <button class="tab-button active" data-tab="general-tab">General</button>
+                <button class="tab-button" data-tab="gmail-tab">Gmail</button>
+                <button class="tab-button" data-tab="gdrive-tab">Google Drive</button>
+                <button class="tab-button" data-tab="whatsapp-tab">WhatsApp</button>
+                <button class="tab-button" data-tab="slack-tab">Slack</button>
+            </div>
+            
+            <div class="tab-content-container">
+                <!-- General Tab -->
+                <div id="general-tab" class="tab-content active">
+                    <h4>OAuth Setup Overview</h4>
+                    <p>OAuth (Open Authorization) is a protocol that allows secure authorization without sharing credentials.</p>
+                    
+                    <h5>Why Use OAuth?</h5>
+                    <ul>
+                        <li>Secure access to external services</li>
+                        <li>No need to store user credentials</li>
+                        <li>Granular permission control</li>
+                        <li>Revocable access</li>
+                    </ul>
+                    
+                    <h5>General Steps:</h5>
+                    <ol>
+                        <li>Register your application with the service provider</li>
+                        <li>Configure redirect URIs</li>
+                        <li>Connect via OAuth flow</li>
+                        <li>Store and manage access tokens securely</li>
+                    </ol>
+                    
+                    <p class="info-text">More detailed instructions are available in the documentation.</p>
+                </div>
+                
+                <!-- Gmail Tab -->
+                <div id="gmail-tab" class="tab-content">
+                    <h4>Gmail OAuth Setup</h4>
+                    
+                    <h5>Required Credentials:</h5>
+                    <ul>
+                        <li>Client ID</li>
+                        <li>Client Secret</li>
+                        <li>Redirect URI: <code>https://your-domain.com/oauth/callback/gmail</code></li>
+                    </ul>
+                    
+                    <h5>Required Scopes:</h5>
+                    <ul>
+                        <li><code>https://www.googleapis.com/auth/gmail.readonly</code> - Read emails</li>
+                        <li><code>https://www.googleapis.com/auth/gmail.labels</code> - Manage labels</li>
+                        <li><code>https://www.googleapis.com/auth/gmail.send</code> - Send emails (optional)</li>
+                    </ul>
+                    
+                    <h5>Setup Instructions:</h5>
+                    <ol>
+                        <li>Go to the <a href="https://console.developers.google.com/" target="_blank">Google API Console</a></li>
+                        <li>Create a new project</li>
+                        <li>Enable the Gmail API</li>
+                        <li>Configure the OAuth consent screen</li>
+                        <li>Create OAuth credentials</li>
+                        <li>Use the credentials to connect from this page</li>
+                    </ol>
+                    
+                    <p class="info-text">For detailed instructions, please refer to <a href="/docs/email_gateway_setup.md">Email Gateway Setup</a> documentation.</p>
+                </div>
+                
+                <!-- Google Drive Tab -->
+                <div id="gdrive-tab" class="tab-content">
+                    <h4>Google Drive OAuth Setup</h4>
+                    
+                    <h5>Required Credentials:</h5>
+                    <ul>
+                        <li>Client ID</li>
+                        <li>Client Secret</li>
+                        <li>Redirect URI: <code>https://your-domain.com/oauth/callback/gdrive</code></li>
+                    </ul>
+                    
+                    <h5>Required Scopes:</h5>
+                    <ul>
+                        <li><code>https://www.googleapis.com/auth/drive.readonly</code> - Read files</li>
+                        <li><code>https://www.googleapis.com/auth/drive.metadata.readonly</code> - Read file metadata</li>
+                    </ul>
+                    
+                    <h5>Setup Instructions:</h5>
+                    <ol>
+                        <li>Go to the <a href="https://console.developers.google.com/" target="_blank">Google API Console</a></li>
+                        <li>Create a new project (or use existing)</li>
+                        <li>Enable the Google Drive API</li>
+                        <li>Configure the OAuth consent screen</li>
+                        <li>Create OAuth credentials</li>
+                        <li>Use the credentials to connect from this page</li>
+                    </ol>
+                </div>
+                
+                <!-- WhatsApp Tab -->
+                <div id="whatsapp-tab" class="tab-content">
+                    <h4>WhatsApp Business API Setup</h4>
+                    
+                    <h5>Required Credentials:</h5>
+                    <ul>
+                        <li>Phone Number ID</li>
+                        <li>Access Token</li>
+                    </ul>
+                    
+                    <h5>Setup Instructions:</h5>
+                    <ol>
+                        <li>Register for a WhatsApp Business API account</li>
+                        <li>Set up a Meta Developer account</li>
+                        <li>Create a Meta app and add WhatsApp product</li>
+                        <li>Get your Phone Number ID</li>
+                        <li>Generate a permanent access token</li>
+                        <li>Enter these credentials on this page</li>
+                    </ol>
+                    
+                    <h5>Webhook Setup:</h5>
+                    <p>For receiving messages, configure your webhook:</p>
+                    <ul>
+                        <li>Webhook URL: <code>https://your-domain.com/webhook/whatsapp</code></li>
+                        <li>Verify Token: Set up in system settings</li>
+                    </ul>
+                </div>
+                
+                <!-- Slack Tab -->
+                <div id="slack-tab" class="tab-content">
+                    <h4>Slack OAuth Setup</h4>
+                    
+                    <h5>Required Credentials:</h5>
+                    <ul>
+                        <li>Client ID</li>
+                        <li>Client Secret</li>
+                        <li>Redirect URI: <code>https://your-domain.com/oauth/callback/slack</code></li>
+                    </ul>
+                    
+                    <h5>Required Scopes:</h5>
+                    <ul>
+                        <li><code>channels:history</code> - View messages in public channels</li>
+                        <li><code>channels:read</code> - View public channels</li>
+                        <li><code>chat:write</code> - Send messages as app</li>
+                        <li><code>reactions:read</code> - View emoji reactions</li>
+                    </ul>
+                    
+                    <h5>Setup Instructions:</h5>
+                    <ol>
+                        <li>Go to the <a href="https://api.slack.com/apps" target="_blank">Slack API website</a></li>
+                        <li>Create a new app</li>
+                        <li>Add OAuth scopes</li>
+                        <li>Configure redirect URLs</li>
+                        <li>Install the app to your workspace</li>
+                        <li>Use the provided credentials to connect</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Status Modal -->
+<div id="status-modal" class="modal">
+    <div class="modal-content small-modal">
+        <div class="modal-header">
+            <h2 id="status-title">Connection Status</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="status-message" class="status-message">
+                <p>Processing your request...</p>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary close-modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .oauth-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 20px;
+    }
+    
+    .service-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .service-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .service-card-header {
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        background-color: #f5f7fa;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .service-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    
+    .service-title {
+        flex: 1;
+        margin: 0;
+    }
+    
+    .service-status {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .connected .status-dot {
+        background-color: #2ecc71;
+    }
+    
+    .disconnected .status-dot {
+        background-color: #e74c3c;
+    }
+    
+    .service-card-body {
+        padding: 20px;
+    }
+    
+    .service-description {
+        margin-top: 0;
+        color: #555;
+    }
+    
+    .connection-details {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .connection-detail {
+        display: flex;
+        margin-bottom: 8px;
+    }
+    
+    .connection-detail:last-child {
+        margin-bottom: 0;
+    }
+    
+    .detail-label {
+        width: 100px;
+        font-weight: 500;
+        color: #666;
+    }
+    
+    .setup-instructions {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .setup-instructions ol {
+        margin-bottom: 0;
+        padding-left: 20px;
+    }
+    
+    .service-card-actions {
+        padding: 15px 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    
+    .oauth-guide {
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .oauth-tabs {
+        display: flex;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+        overflow-x: auto;
+    }
+    
+    .tab-button {
+        background: none;
+        border: none;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+    }
+    
+    .tab-button.active {
+        border-bottom-color: #3498db;
+        font-weight: 500;
+    }
+    
+    .tab-content {
+        display: none;
+        padding: 5px;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .tab-content h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    .tab-content h5 {
+        margin-bottom: 10px;
+        color: #555;
+    }
+    
+    .tab-content ul, .tab-content ol {
+        padding-left: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .tab-content code {
+        background-color: #f1f1f1;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    
+    .info-text {
+        background-color: #e3f2fd;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-top: 15px;
+    }
+    
+    .oauth-credentials-form {
+        margin-top: 15px;
+    }
+    
+    .status-message {
+        text-align: center;
+        padding: 20px 10px;
+    }
+    
+    .small-modal {
+        max-width: 400px;
+    }
+    
+    /* Service specific styling */
+    .gmail .service-icon {
+        background-color: #fcf1f1;
+        color: #d93025;
+    }
+    
+    .gdrive .service-icon {
+        background-color: #f0f8ff;
+        color: #4285f4;
+    }
+    
+    .whatsapp .service-icon {
+        background-color: #f1f9f1;
+        color: #25d366;
+    }
+    
+    .slack .service-icon {
+        background-color: #f9f1f9;
+        color: #4a154b;
+    }
+    
+    @media (max-width: 768px) {
+        .oauth-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and tabs
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                // Add active class to current button and tab
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Modal functionality
+        const modal = document.getElementById('status-modal');
+        const closeButtons = document.querySelectorAll('.close, .close-modal');
+        
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+        });
+        
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Service connection functions
+    function connectService(service) {
+        const modal = document.getElementById('status-modal');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        
+        statusTitle.textContent = `Connecting to ${getServiceName(service)}`;
+        statusMessage.innerHTML = '<p>You will be redirected to the service login page...</p>';
+        
+        modal.style.display = 'block';
+        
+        // In a real implementation, this would redirect to the OAuth flow
+        // For the demo, we'll simulate the redirect after a short delay
+        setTimeout(() => {
+            window.location.href = `#simulate-oauth-${service}`;
+            // In a real implementation, this would be the actual OAuth URL
+            // window.location.href = `/oauth/authorize/${service}`;
+        }, 2000);
+    }
+    
+    function connectWithCredentials(service) {
+        const modal = document.getElementById('status-modal');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        
+        statusTitle.textContent = `Connecting to ${getServiceName(service)}`;
+        statusMessage.innerHTML = '<p>Verifying credentials...</p>';
+        
+        modal.style.display = 'block';
+        
+        // Simulate credential verification
+        setTimeout(() => {
+            statusMessage.innerHTML = '<p>Connection successful! Refreshing page...</p>';
+            
+            // Simulate page refresh
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }, 2000);
+    }
+    
+    function reconnectService(service) {
+        const modal = document.getElementById('status-modal');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        
+        statusTitle.textContent = `Reconnecting to ${getServiceName(service)}`;
+        statusMessage.innerHTML = '<p>Refreshing OAuth connection...</p>';
+        
+        modal.style.display = 'block';
+        
+        // Simulate reconnection
+        setTimeout(() => {
+            statusMessage.innerHTML = '<p>Connection refreshed successfully!</p>';
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 1500);
+        }, 2000);
+    }
+    
+    function disconnectService(service) {
+        const modal = document.getElementById('status-modal');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        
+        statusTitle.textContent = `Disconnecting from ${getServiceName(service)}`;
+        statusMessage.innerHTML = '<p>Revoking access and removing credentials...</p>';
+        
+        modal.style.display = 'block';
+        
+        // Simulate disconnection
+        setTimeout(() => {
+            statusMessage.innerHTML = '<p>Disconnected successfully! Refreshing page...</p>';
+            
+            // Simulate page refresh
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }, 2000);
+    }
+    
+    function getServiceName(service) {
+        const services = {
+            'gmail': 'Gmail',
+            'gdrive': 'Google Drive',
+            'whatsapp': 'WhatsApp',
+            'slack': 'Slack'
+        };
+        
+        return services[service] || service;
+    }
+</script>
+{% endblock %}

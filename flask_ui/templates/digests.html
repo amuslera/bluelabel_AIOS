@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Digests - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Content Digests</h1>
+    <p class="page-description">View and manage your content digests.</p>
+    <div class="page-actions">
+        <a href="#" class="btn btn-primary" id="create-digest-btn">Create New Digest</a>
+    </div>
+</div>
+
+<div class="digest-list">
+    <!-- Demo Digests (would be replaced with real data from the API) -->
+    <div class="digest-card">
+        <div class="digest-card-header">
+            <h3 class="digest-title">Weekly AI Research Digest</h3>
+            <span class="digest-date">May 15, 2023</span>
+        </div>
+        <div class="digest-card-body">
+            <p class="digest-description">Summary of key AI research papers and developments from the past week.</p>
+            <div class="digest-meta">
+                <div class="digest-info">
+                    <span class="info-label">Documents:</span>
+                    <span class="info-value">8</span>
+                </div>
+                <div class="digest-info">
+                    <span class="info-label">Created by:</span>
+                    <span class="info-value">Digest Agent</span>
+                </div>
+                <div class="digest-info">
+                    <span class="info-label">Model:</span>
+                    <span class="info-value">GPT-4</span>
+                </div>
+            </div>
+            <div class="digest-tags">
+                <span class="tag">AI</span>
+                <span class="tag">Research</span>
+                <span class="tag">Weekly</span>
+            </div>
+        </div>
+        <div class="digest-card-actions">
+            <a href="#" class="btn">View Digest</a>
+            <button class="btn btn-icon" title="Export"><i class="icon">📥</i></button>
+            <button class="btn btn-icon" title="Delete"><i class="icon">🗑️</i></button>
+        </div>
+    </div>
+    
+    <div class="digest-card">
+        <div class="digest-card-header">
+            <h3 class="digest-title">ML Framework Comparison</h3>
+            <span class="digest-date">May 10, 2023</span>
+        </div>
+        <div class="digest-card-body">
+            <p class="digest-description">A detailed comparison of popular machine learning frameworks and their performance.</p>
+            <div class="digest-meta">
+                <div class="digest-info">
+                    <span class="info-label">Documents:</span>
+                    <span class="info-value">5</span>
+                </div>
+                <div class="digest-info">
+                    <span class="info-label">Created by:</span>
+                    <span class="info-value">Digest Agent</span>
+                </div>
+                <div class="digest-info">
+                    <span class="info-label">Model:</span>
+                    <span class="info-value">Claude 3</span>
+                </div>
+            </div>
+            <div class="digest-tags">
+                <span class="tag">ML</span>
+                <span class="tag">Frameworks</span>
+                <span class="tag">Technical</span>
+            </div>
+        </div>
+        <div class="digest-card-actions">
+            <a href="#" class="btn">View Digest</a>
+            <button class="btn btn-icon" title="Export"><i class="icon">📥</i></button>
+            <button class="btn btn-icon" title="Delete"><i class="icon">🗑️</i></button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Digest Modal -->
+<div id="create-digest-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Digest</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="create-digest-form">
+                <div class="form-group">
+                    <label for="digest-title">Digest Title</label>
+                    <input type="text" id="digest-title" name="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="digest-description">Description</label>
+                    <textarea id="digest-description" name="description" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Content Selection</label>
+                    <div class="selection-tabs">
+                        <button type="button" class="tab-button active" data-tab="manual-select">Select Manually</button>
+                        <button type="button" class="tab-button" data-tab="auto-select">Auto Select</button>
+                    </div>
+                    
+                    <div id="manual-select" class="tab-content active">
+                        <div class="content-selection-list">
+                            <div class="content-selection-item">
+                                <input type="checkbox" id="content-1" name="content[]" value="1">
+                                <label for="content-1">Introduction to Artificial Intelligence</label>
+                            </div>
+                            <div class="content-selection-item">
+                                <input type="checkbox" id="content-2" name="content[]" value="2">
+                                <label for="content-2">Machine Learning Fundamentals</label>
+                            </div>
+                            <!-- More content items would be populated from the API -->
+                        </div>
+                    </div>
+                    
+                    <div id="auto-select" class="tab-content">
+                        <div class="form-group">
+                            <label for="auto-criteria">Selection Criteria</label>
+                            <select id="auto-criteria" name="criteria">
+                                <option value="recent">Most Recent (last 7 days)</option>
+                                <option value="tag">By Tag</option>
+                                <option value="keyword">By Keyword</option>
+                            </select>
+                        </div>
+                        
+                        <div id="tag-criteria" class="criteria-option">
+                            <div class="form-group">
+                                <label for="tag-input">Select Tags</label>
+                                <input type="text" id="tag-input" name="tags" placeholder="e.g. AI, Machine Learning">
+                            </div>
+                        </div>
+                        
+                        <div id="keyword-criteria" class="criteria-option" style="display: none;">
+                            <div class="form-group">
+                                <label for="keyword-input">Keywords</label>
+                                <input type="text" id="keyword-input" name="keywords" placeholder="e.g. neural networks, deep learning">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="digest-model">Model</label>
+                    <select id="digest-model" name="model">
+                        <option value="Auto">Auto-select</option>
+                        <option value="GPT-4">GPT-4</option>
+                        <option value="Claude 3">Claude 3</option>
+                        <option value="Llama 3">Llama 3</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-digest">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Digest</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .digest-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .digest-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .digest-card-header {
+        background-color: #f5f7fa;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .digest-title {
+        margin: 0;
+        font-size: 1.3rem;
+    }
+    
+    .digest-date {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .digest-card-body {
+        padding: 20px;
+    }
+    
+    .digest-description {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    .digest-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .digest-info {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .info-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .info-value {
+        font-weight: 500;
+    }
+    
+    .digest-card-actions {
+        padding: 15px 20px;
+        background-color: #f9f9f9;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        width: 70%;
+        max-width: 800px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+    }
+    
+    .close {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .selection-tabs {
+        display: flex;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .selection-tabs .tab-button {
+        background: none;
+        border: none;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 1rem;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .selection-tabs .tab-button.active {
+        border-bottom-color: #3498db;
+        font-weight: 500;
+    }
+    
+    .content-selection-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+    }
+    
+    .content-selection-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .content-selection-item:last-child {
+        border-bottom: none;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .criteria-option {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal functionality
+        const modal = document.getElementById('create-digest-modal');
+        const btn = document.getElementById('create-digest-btn');
+        const closeBtn = document.querySelector('.close');
+        const cancelBtn = document.getElementById('cancel-digest');
+        
+        btn.addEventListener('click', function() {
+            modal.style.display = 'block';
+        });
+        
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        cancelBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Tab functionality
+        const tabButtons = document.querySelectorAll('.selection-tabs .tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Selection criteria change
+        const criteriaSel = document.getElementById('auto-criteria');
+        const tagCriteria = document.getElementById('tag-criteria');
+        const keywordCriteria = document.getElementById('keyword-criteria');
+        
+        criteriaSel.addEventListener('change', function() {
+            const value = this.value;
+            
+            // Hide all criteria options
+            document.querySelectorAll('.criteria-option').forEach(opt => {
+                opt.style.display = 'none';
+            });
+            
+            // Show the selected option
+            if (value === 'tag') {
+                tagCriteria.style.display = 'block';
+            } else if (value === 'keyword') {
+                keywordCriteria.style.display = 'block';
+            }
+        });
+        
+        // Form submission
+        const form = document.getElementById('create-digest-form');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // In a real implementation, this would submit the form to the API
+            alert('Digest creation would be sent to the API');
+            
+            // Close the modal
+            modal.style.display = 'none';
+        });
+    });
+</script>
+{% endblock %}
