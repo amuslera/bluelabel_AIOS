@@ -125,7 +125,9 @@ def start_ui_server(ui_config):
     # Update Streamlit configuration
     update_streamlit_config(ui_config)
     
-    ui_path = Path(__file__).parent / "app" / "ui" / "streamlit_app.py"
+    # Use the completely new UI implementation
+    ui_path = Path(__file__).parent / "new_ui" / "app.py"
+    
     if not ui_path.exists():
         logger.error(f"UI file not found: {ui_path}")
         print(f"Error: UI file not found: {ui_path}")

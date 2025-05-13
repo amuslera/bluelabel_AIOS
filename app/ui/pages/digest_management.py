@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional
 
 # Define API endpoint (using the same as in main streamlit_app.py)
 import os
-API_ENDPOINT = os.environ.get("API_ENDPOINT", "http://localhost:8080")
+API_ENDPOINT = os.environ.get("API_ENDPOINT", "http://localhost:8081")
 
 def format_date(date_str):
     """Format date string for display"""
@@ -199,10 +199,13 @@ def display_digest_details(digest: Dict[str, Any]):
             )
 
 def render_scheduled_digests_tab():
-    """Render the tab for scheduling and managing digest schedules."""
+    """Render the tab for managing scheduled digests."""
     st.subheader("Scheduled Digests")
     
-    # Show existing scheduled digests
+    # Initialize scheduled_digests
+    scheduled_digests = []
+    
+    # Fetch scheduled digests from the API
     try:
         response = requests.get(f"{API_ENDPOINT}/scheduler/digests")
         
@@ -212,62 +215,19 @@ def render_scheduled_digests_tab():
             if result.get("status") == "success":
                 scheduled_digests = result.get("scheduled_digests", [])
                 
-                # Toggle for showing inactive schedules
-                show_inactive = st.checkbox("Show inactive schedules", value=False)
-                
-                # Filter by active status if needed
-                if not show_inactive:
-                    scheduled_digests = [d for d in scheduled_digests if d.get("active", False)]
-                
                 if scheduled_digests:
-                    st.write(f"Found {len(scheduled_digests)} scheduled digests")
-                    
-                    # Display as a table
-                    df_data = []
+                    # Display existing scheduled digests
                     for digest in scheduled_digests:
-                        df_data.append({
-                            "Type": digest.get("digest_type", "Unknown").title(),
-                            "Schedule": f"{digest.get('schedule_type', 'Unknown').title()} at {digest.get('time', 'Unknown')}",
-                            "Next Run": format_date(digest.get("next_run", "")),
-                            "Recipient": digest.get("recipient", ""),
-                            "Active": "✅" if digest.get("active", False) else "❌",
-                            "ID": digest.get("id")
-                        })
-                    
-                    df = pd.DataFrame(df_data)
-                    
-                    st.dataframe(
-                        df,
-                        column_config={
-                            "Type": st.column_config.TextColumn("Type"),
-                            "Schedule": st.column_config.TextColumn("Schedule"),
-                            "Next Run": st.column_config.TextColumn("Next Run"),
-                            "Recipient": st.column_config.TextColumn("Recipient"),
-                            "Active": st.column_config.TextColumn("Active"),
-                            "ID": st.column_config.TextColumn("ID", width="small")
-                        },
-                        hide_index=True
-                    )
-                    
-                    # Allow selection of a schedule to edit
-                    selected_schedule = st.selectbox(
-                        "Select Schedule to Edit",
-                        [""] + [f"{d.get('digest_type', 'Unknown').title()} {d.get('schedule_type', '')} ({d.get('id')})" for d in scheduled_digests]
-                    )
-                    
-                    if selected_schedule:
-                        # Extract ID from selection
-                        schedule_id = selected_schedule.split("(")[-1].rstrip(")")
-                        selected_digest = next((d for d in scheduled_digests if d.get("id") == schedule_id), None)
-                        
-                        if selected_digest:
-                            edit_scheduled_digest(selected_digest)
+                        with st.expander(f"{digest.get('title', 'Untitled')} - {digest.get('schedule_type', 'Unknown')}"):
+                            display_scheduled_digest(digest)
                 else:
-                    st.info("No scheduled digests found")
+                    st.info("No scheduled digests found.")
             else:
                 st.error(f"Error: {result.get('message')}")
         else:
-            st.error(f"Error: {response.status_code} - {response.text}")
+            st.info("Scheduled digests feature is not available yet.")
+    except requests.RequestException:
+        st.info("Scheduled digests feature is not available yet.")
     except Exception as e:
         st.error(f"Error: {str(e)}")
     

@@ -15,7 +15,7 @@ import io
 import zipfile
 
 # API endpoint
-API_ENDPOINT = "http://localhost:8080"  # Update as needed
+API_ENDPOINT = "http://localhost:8081"  # Update as needed
 
 def component_library_page():
     """Render the component library page."""

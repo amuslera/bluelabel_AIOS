@@ -9,7 +9,7 @@ import os
 from typing import Dict, Any
 
 # API configuration
-API_ENDPOINT = os.environ.get("BLUEABEL_API_ENDPOINT", "http://localhost:8080")
+API_ENDPOINT = os.environ.get("BLUEABEL_API_ENDPOINT", "http://localhost:8081")
 
 # Content type configuration
 CONTENT_TYPE_ICONS = {
@@ -108,7 +108,8 @@ PAGES = {
     ],
     "System": [
         {"name": "Dashboard", "icon": "📊", "description": "System status and analytics"},
-        {"name": "Settings", "icon": "⚙️", "description": "Configure system settings"}
+        {"name": "Settings", "icon": "⚙️", "description": "Configure system settings"},
+        {"name": "Google OAuth Setup", "icon": "🔐", "description": "Configure Google OAuth for email access"}
     ]
 }
 
@@ -263,5 +264,29 @@ def get_custom_css() -> str:
     .active-page {
         font-weight: bold;
         color: #4a6bf2;
+    }
+    
+    /* IMPORTANT: Fix for duplicate sidebar issue */
+    /* This ensures only the first instance of each sidebar element is shown */
+    /* Hide duplicate sidebar headers */
+    [data-testid="stSidebar"] .sidebar-content:not(:first-of-type) {
+        display: none !important;
+    }
+    
+    /* Hide duplicate sidebar elements */
+    [data-testid="stSidebar"] > div:not(:first-child) h1,
+    [data-testid="stSidebar"] > div:not(:first-child) h2,
+    [data-testid="stSidebar"] > div:not(:first-child) h3 {
+        display: none !important;
+    }
+    
+    /* Ensure we only show one set of sidebar navigation */
+    [data-testid="stSidebar"] {
+        overflow-y: auto !important;
+    }
+    
+    /* Control sidebar element duplication */
+    [data-testid="stSidebar"] > div > div:nth-child(n+2) .sidebar-navigation {
+        display: none !important;
     }
     """

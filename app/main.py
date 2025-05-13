@@ -498,6 +498,10 @@ async def debug_agents():
         "agents": {k: str(v) + f" (id={id(v)})" for k, v in agent_registry.agents.items()}
     }
 
+@app.get("/status")
+async def status():
+    return {"status": "ok"}
+
 # Include API routes
 from app.api.routes.components import router as components_router
 app.include_router(components_router)

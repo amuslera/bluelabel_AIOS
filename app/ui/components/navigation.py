@@ -48,8 +48,11 @@ def render_sidebar_navigation() -> None:
     
     current_page = st.session_state.page
     
+    # Add a special CSS class to help identify the main navigation
+    st.sidebar.markdown('<div class="sidebar-navigation">', unsafe_allow_html=True)
+    
     # Show logo and app title
-    st.sidebar.image("https://via.placeholder.com/150x50.png?text=BlueAbel+AIOS", width=200)
+    # st.sidebar.image("https://via.placeholder.com/150x50.png?text=BlueAbel+AIOS", width=200)
     st.sidebar.title("ContentMind")
     
     # Divider
@@ -132,6 +135,9 @@ def render_sidebar_navigation() -> None:
         theme_label = "🌙 Dark Mode" if not st.session_state.is_dark_mode else "☀️ Light Mode"
         if st.button(theme_label, key="toggle_theme"):
             st.session_state.is_dark_mode = not st.session_state.is_dark_mode
+    
+    # Close the sidebar navigation div
+    st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 def render_breadcrumbs(additional_crumbs: Optional[List[Dict[str, Any]]] = None) -> None:
     """
@@ -192,7 +198,7 @@ def render_breadcrumbs(additional_crumbs: Optional[List[Dict[str, Any]]] = None)
         # Create hidden buttons for breadcrumb clicks
         for i, crumb in enumerate(crumbs):
             if not crumb.get("is_active", False):
-                if st.button(f"_{crumb['name']}", key=f"breadcrumb_{i}", help=f"Navigate to {crumb['name']}", label_visibility="collapsed"):
+                if st.button(f"_{crumb['name']}", key=f"breadcrumb_{i}", help=f"Navigate to {crumb['name']}"):
                     # Handle breadcrumb click
                     if i == 0:  # Home
                         set_page("Process Content")  # Default home page

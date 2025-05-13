@@ -13,16 +13,11 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
 # API Settings
-API_BASE_URL = "http://localhost:8080"
+API_BASE_URL = "http://localhost:8081"
 COMPONENTS_URL = f"{API_BASE_URL}/components"
 
-# Page configuration
-st.set_page_config(
-    page_title="Prompt Manager",
-    page_icon="📝",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Page configuration is handled by the main app
+# Removed st.set_page_config to prevent duplicate sidebar issues
 
 # Styling
 st.markdown("""
@@ -232,20 +227,20 @@ def format_diff(old_text: str, new_text: str) -> str:
     return "".join(html_diff)
 
 # Sidebar for component selection and main actions
-st.sidebar.title("Prompt Manager")
+# st.sidebar.title("Prompt Manager")
 
 # Component selector
-st.sidebar.markdown("<div class='sidebar-section'><h3>Select Component</h3></div>", unsafe_allow_html=True)
+# st.sidebar.markdown("<div class='sidebar-section'><h3>Select Component</h3></div>", unsafe_allow_html=True)
 components = get_components()
 component_options = {comp["name"]: comp["id"] for comp in components}
 component_names = list(component_options.keys())
 
-selected_name = st.sidebar.selectbox("Select a component", component_names if component_names else ["No components found"])
+selected_name = st.selectbox("Select a component", component_names if component_names else ["No components found"])
 selected_id = component_options.get(selected_name) if component_names else None
 
 # Main actions
-st.sidebar.markdown("<div class='sidebar-section'><h3>Actions</h3></div>", unsafe_allow_html=True)
-action = st.sidebar.radio(
+# st.sidebar.markdown("<div class='sidebar-section'><h3>Actions</h3></div>", unsafe_allow_html=True)
+action = st.radio(
     "Choose action",
     ["View Component", "Edit Component", "View Versions", "Test Component", "Create New Component"],
     key="action"

@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 import time
 
 # API endpoint
-API_ENDPOINT = "http://localhost:8080"  # Update as needed
+API_ENDPOINT = "http://localhost:8081"  # Update as needed
 
 def component_editor_page():
     """Render the component editor page."""

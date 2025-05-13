@@ -7,7 +7,7 @@
   },
   "ui": {
     "host": "127.0.0.1",
-    "port": 8502,
+    "port": 9002,
     "allow_cors": true,
     "use_watchdog": true
   },
