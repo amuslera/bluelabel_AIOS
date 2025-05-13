@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlueAbel AIOS - Static UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #f9f9fb;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background-color: #f0f2f5;
+            height: 100vh;
+            padding: 25px;
+            box-sizing: border-box;
+            border-right: 1px solid #e5e7eb;
+            overflow-y: auto;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+        
+        .content {
+            margin-left: 280px;
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        h1 {
+            color: #1f2937;
+            margin-top: 0;
+            font-size: 2.2rem;
+            font-weight: 600;
+        }
+        
+        h2 {
+            color: #1f2937;
+            font-size: 1.8rem;
+            font-weight: 500;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        
+        h3 {
+            color: #4b5563;
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-top: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+        
+        .nav-section {
+            margin-bottom: 25px;
+        }
+        
+        .nav-section-title {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+        
+        .nav-items {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .nav-item {
+            margin-bottom: 8px;
+        }
+        
+        .nav-item a {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #4b5563;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item a:hover {
+            background-color: #e5e7eb;
+            color: #1f2937;
+        }
+        
+        .nav-item a.active {
+            background-color: #4a6bf2;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .nav-item-icon {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 18px;
+            background-color: #4a6bf2;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        
+        .btn:hover {
+            background-color: #3a55d9;
+        }
+        
+        .info-box {
+            padding: 20px;
+            background-color: #e7f3ff;
+            border-radius: 8px;
+            margin: 25px 0;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .warning-box {
+            padding: 20px;
+            background-color: #fff7ed;
+            border-radius: 8px;
+            margin: 25px 0;
+            border-left: 4px solid #f97316;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4b5563;
+        }
+        
+        select, input[type="text"], input[type="email"], input[type="password"], textarea {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            width: 100%;
+            max-width: 400px;
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            min-height: 120px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 25px;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            border-bottom-color: #4a6bf2;
+            color: #4a6bf2;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #e5e7eb;
+            margin: 25px 0;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-col {
+            flex: 1;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox-group input {
+            margin-right: 10px;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th, .table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: #4b5563;
+            background-color: #f9fafb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .badge-blue {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+        
+        .badge-green {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+        
+        .badge-orange {
+            background-color: #ffedd5;
+            color: #c2410c;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Hide all tab contents
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Remove active class from all tabs
+                    tabs.forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    
+                    // Show selected tab content
+                    document.getElementById(tabId).classList.add('active');
+                    this.classList.add('active');
+                });
+            });
+
+            // Page navigation
+            document.querySelectorAll('.nav-item a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const pageId = this.getAttribute('data-page');
+                    
+                    // Hide all pages
+                    document.querySelectorAll('.page').forEach(page => {
+                        page.style.display = 'none';
+                    });
+                    
+                    // Show selected page
+                    document.getElementById(pageId).style.display = 'block';
+                    
+                    // Update active navigation
+                    document.querySelectorAll('.nav-item a').forEach(navLink => {
+                        navLink.classList.remove('active');
+                    });
+                    
+                    this.classList.add('active');
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="sidebar">
+        <h1 class="sidebar-title">BlueAbel AIOS</h1>
+        <p class="sidebar-subtitle">Content Intelligence System</p>
+        
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="#" data-page="home" class="active">
+                        <span class="nav-item-icon">🏠</span>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" data-page="process">
+                        <span class="nav-item-icon">📝</span>
+                        Process Content
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-section-title">Content</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="#" data-page="view">
+                        <span class="nav-item-icon">📚</span>
+                        View Content
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" data-page="search">
+                        <span class="nav-item-icon">🔍</span>
+                        Search
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" data-page="digest">
+                        <span class="nav-item-icon">📊</span>
+                        Digests
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-section-title">Components</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="#" data-page="component-editor">
+                        <span class="nav-item-icon">✏️</span>
+                        Component Editor
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" data-page="component-library">
+                        <span class="nav-item-icon">📋</span>
+                        Component Library
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-section-title">System</div>
+            <ul class="nav-items">
+                <li class="nav-item">
+                    <a href="#" data-page="settings">
+                        <span class="nav-item-icon">⚙️</span>
+                        Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" data-page="oauth">
+                        <span class="nav-item-icon">🔐</span>
+                        OAuth Setup
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="content">
+        <!-- Home/Dashboard Page -->
+        <div id="home" class="page">
+            <h1>Dashboard</h1>
+            <p>Welcome to the BlueAbel AIOS system. This is a static HTML UI that requires no server to run.</p>
+            
+            <div class="info-box">
+                <p><strong>Note:</strong> This is a clean implementation with zero dependencies on any server components.</p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <h2>System Overview</h2>
+            
+            <div style="display: flex; gap: 20px; margin-bottom: 25px;">
+                <div class="card" style="flex: 1;">
+                    <h3 class="card-title">Content Items</h3>
+                    <div style="font-size: 2rem; font-weight: 600; color: #4a6bf2;">254</div>
+                    <p style="color: #6b7280;">+12 this week</p>
+                </div>
+                
+                <div class="card" style="flex: 1;">
+                    <h3 class="card-title">Content Types</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <span class="badge badge-blue">URLs: 124</span>
+                        <span class="badge badge-green">PDFs: 76</span>
+                        <span class="badge badge-orange">Text: 54</span>
+                    </div>
+                </div>
+                
+                <div class="card" style="flex: 1;">
+                    <h3 class="card-title">System Status</h3>
+                    <div style="color: #10b981; font-weight: 600;">
+                        <span style="font-size: 1.2rem;">●</span> All Systems Operational
+                    </div>
+                </div>
+            </div>
+            
+            <h2>Recent Activity</h2>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Action</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>10:15 AM</td>
+                        <td>Content Processing</td>
+                        <td><span class="badge badge-green">Completed</span></td>
+                        <td>URL: example.com/article</td>
+                    </tr>
+                    <tr>
+                        <td>09:30 AM</td>
+                        <td>Digest Generation</td>
+                        <td><span class="badge badge-green">Completed</span></td>
+                        <td>3 Documents</td>
+                    </tr>
+                    <tr>
+                        <td>Yesterday</td>
+                        <td>OAuth Setup</td>
+                        <td><span class="badge badge-green">Completed</span></td>
+                        <td>Gmail access</td>
+                    </tr>
+                    <tr>
+                        <td>Yesterday</td>
+                        <td>Content Search</td>
+                        <td><span class="badge badge-green">Completed</span></td>
+                        <td>Query: 'AI trends'</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Process Content Page -->
+        <div id="process" class="page" style="display: none;">
+            <h1>Process Content</h1>
+            <p>Use this page to process new content through the AI pipeline.</p>
+            
+            <div class="tabs">
+                <div class="tab active" data-tab="tab-url">URL</div>
+                <div class="tab" data-tab="tab-text">Text</div>
+                <div class="tab" data-tab="tab-file">File</div>
+                <div class="tab" data-tab="tab-email">Email</div>
+            </div>
+            
+            <div id="tab-url" class="tab-content active">
+                <div class="card">
+                    <h3 class="card-title">Process Web Content</h3>
+                    
+                    <div class="form-group">
+                        <label for="url">URL to Process</label>
+                        <input type="text" id="url" placeholder="https://example.com/article">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="include-images" checked>
+                                <label for="include-images">Include Images</label>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="create-digest" checked>
+                                <label for="create-digest">Create Digest</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="url-model">Model</label>
+                        <select id="url-model">
+                            <option>Auto-select</option>
+                            <option>GPT-4</option>
+                            <option>Claude 3</option>
+                            <option>Llama 3</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="alert('Processing URL (demo only)')">Process URL</button>
+                </div>
+            </div>
+            
+            <div id="tab-text" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title">Process Text Content</h3>
+                    
+                    <div class="form-group">
+                        <label for="text-content">Text Content</label>
+                        <textarea id="text-content" placeholder="Paste your text content here..."></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="extract-entities" checked>
+                                <label for="extract-entities">Extract Entities</label>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="generate-tags" checked>
+                                <label for="generate-tags">Generate Tags</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="text-model">Model</label>
+                        <select id="text-model">
+                            <option>Auto-select</option>
+                            <option>GPT-4</option>
+                            <option>Claude 3</option>
+                            <option>Llama 3</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="alert('Processing text content (demo only)')">Process Text</button>
+                </div>
+            </div>
+            
+            <div id="tab-file" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title">Process File Content</h3>
+                    
+                    <div class="form-group">
+                        <label for="file-type">File Type</label>
+                        <select id="file-type">
+                            <option>PDF</option>
+                            <option>Word Document</option>
+                            <option>Text File</option>
+                            <option>Spreadsheet</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="file-upload">Select File</label>
+                        <input type="file" id="file-upload">
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="summarize-file" checked>
+                            <label for="summarize-file">Generate Summary</label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="alert('Processing file (demo only)')">Process File</button>
+                </div>
+            </div>
+            
+            <div id="tab-email" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title">Process Email Content</h3>
+                    
+                    <div class="form-group">
+                        <label for="email-subject">Email Subject</label>
+                        <input type="text" id="email-subject">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email-body">Email Body</label>
+                        <textarea id="email-body"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="include-attachments" checked>
+                            <label for="include-attachments">Process Attachments</label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="alert('Processing email (demo only)')">Process Email</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- View Content Page -->
+        <div id="view" class="page" style="display: none;">
+            <h1>View Content</h1>
+            <p>Browse through processed content in your knowledge repository.</p>
+            
+            <div class="form-row" style="margin-top: 20px;">
+                <div class="form-col">
+                    <input type="text" placeholder="Search content..." style="width: 100%;">
+                </div>
+                <div class="form-col" style="flex: 0.5;">
+                    <select>
+                        <option>All Types</option>
+                        <option>URLs</option>
+                        <option>PDFs</option>
+                        <option>Text</option>
+                        <option>Email</option>
+                    </select>
+                </div>
+                <div class="form-col" style="flex: 0.5;">
+                    <select>
+                        <option>Latest First</option>
+                        <option>Oldest First</option>
+                        <option>A-Z</option>
+                        <option>Z-A</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 class="card-title">Introduction to Artificial Intelligence</h3>
+                        <div style="margin-bottom: 10px;">
+                            <span class="badge badge-blue">URL</span>
+                            <span style="color: #6b7280; font-size: 0.9rem; margin-left: 10px;">Processed on May 12, 2023</span>
+                        </div>
+                        <p>An overview of AI concepts and applications, covering key terms, technologies, and future trends.</p>
+                        <div style="margin-top: 10px;">
+                            <span class="badge badge-green">AI</span>
+                            <span class="badge badge-green">Technology</span>
+                            <span class="badge badge-green">Introduction</span>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn" style="margin-bottom: 10px;">View Details</button>
+                        <div style="text-align: center;">
+                            <a href="#" style="color: #4b5563; font-size: 0.9rem;">Generate Digest</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 class="card-title">Machine Learning Fundamentals</h3>
+                        <div style="margin-bottom: 10px;">
+                            <span class="badge badge-orange">PDF</span>
+                            <span style="color: #6b7280; font-size: 0.9rem; margin-left: 10px;">Processed on May 10, 2023</span>
+                        </div>
+                        <p>Core concepts and techniques in machine learning, including supervised and unsupervised learning methods.</p>
+                        <div style="margin-top: 10px;">
+                            <span class="badge badge-green">ML</span>
+                            <span class="badge badge-green">Data Science</span>
+                            <span class="badge badge-green">AI</span>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn" style="margin-bottom: 10px;">View Details</button>
+                        <div style="text-align: center;">
+                            <a href="#" style="color: #4b5563; font-size: 0.9rem;">Generate Digest</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Other pages... -->
+        <div id="search" class="page" style="display: none;">
+            <h1>Search</h1>
+            <p>Search through your knowledge repository.</p>
+            <div class="info-box">
+                <p>Advanced search capabilities are under development.</p>
+            </div>
+        </div>
+        
+        <div id="digest" class="page" style="display: none;">
+            <h1>Digests</h1>
+            <p>View and manage content digests.</p>
+            <div class="info-box">
+                <p>Digest management is under development.</p>
+            </div>
+        </div>
+        
+        <div id="component-editor" class="page" style="display: none;">
+            <h1>Component Editor</h1>
+            <p>Create and edit prompt components.</p>
+            <div class="info-box">
+                <p>Component editor is under development.</p>
+            </div>
+        </div>
+        
+        <div id="component-library" class="page" style="display: none;">
+            <h1>Component Library</h1>
+            <p>Browse and manage prompt components.</p>
+            <div class="info-box">
+                <p>Component library is under development.</p>
+            </div>
+        </div>
+        
+        <div id="settings" class="page" style="display: none;">
+            <h1>Settings</h1>
+            <p>Configure system settings.</p>
+            <div class="info-box">
+                <p>Settings page is under development.</p>
+            </div>
+        </div>
+        
+        <div id="oauth" class="page" style="display: none;">
+            <h1>OAuth Setup</h1>
+            <p>Configure OAuth for email access.</p>
+            <div class="info-box">
+                <p>OAuth setup is under development.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
