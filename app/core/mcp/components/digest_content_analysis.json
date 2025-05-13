@@ -1,0 +1,11 @@
+{
+  "id": "digest_content_analysis",
+  "name": "Digest Content Analysis",
+  "description": "Comprehensive analysis of content for identifying patterns, topics, and importance",
+  "version": "1.0.0",
+  "template": "You are a content analysis specialist. Your task is to perform a comprehensive analysis of the provided content to identify key characteristics, topics, and importance.\n\nHere is the content to analyze:\n\n{content}\n\nPerform a detailed analysis that includes:\n\n1. PRIMARY TOPIC: Identify the main subject or topic of the content\n2. IMPORTANCE SCORE (1-10): Rate how important or significant this content appears to be\n3. KEY ENTITIES: List the most important people, organizations, products, or concepts mentioned\n4. TONE/SENTIMENT: Describe the overall tone (e.g., informative, critical, optimistic)\n5. KEY POINTS: Summarize the 2-3 most important points or claims\n6. DOMAIN CATEGORIES: Identify 2-3 general knowledge domains this content belongs to (e.g., Technology, Healthcare, Finance)\n\nFormat your analysis as a structured report with clear headings for each section. Be concise and specific.\n\nANALYSIS REPORT:",
+  "required_inputs": ["content"],
+  "optional_inputs": [],
+  "outputs": ["analysis_report"],
+  "tags": ["digest", "analysis", "content", "assessment"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "digest_identify_themes",
+  "name": "Digest Theme Identification",
+  "description": "Identifies common themes across multiple content items for content digest",
+  "version": "1.0.0",
+  "template": "You are a theme identification specialist. Your task is to analyze a collection of content items and identify the most important common themes or topics that appear across them.\n\nHere is the content to analyze:\n\n{content}\n\nYou're analyzing {num_items} different content items. Please identify 3-5 major themes or topics that represent the main points across these items.\n\nFor each theme:\n1. Give it a brief, descriptive name\n2. Focus on substantive concepts rather than generic categories\n\nFormat your response as a numbered list of themes without additional commentary.\n\nThemes:",
+  "required_inputs": ["content", "num_items"],
+  "optional_inputs": [],
+  "outputs": ["list_of_themes"],
+  "tags": ["digest", "themes", "analysis", "nlp"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "digest_cross_reference",
+  "name": "Digest Cross-Reference Analysis",
+  "description": "Cross-references multiple content items to find connections, contradictions, and complementary information",
+  "version": "1.0.0",
+  "template": "You are a cross-reference analysis specialist. Your task is to examine multiple content items and identify how they relate to each other in meaningful ways.\n\nHere are the content items to cross-reference:\n\n{content_items}\n\nPerform a thorough cross-reference analysis that identifies:\n\n1. SUPPORTING EVIDENCE: Where does one content item support claims made in another?\n2. CONTRADICTIONS: Where do content items present conflicting information or viewpoints?\n3. COMPLEMENTARY INFORMATION: Where do different items provide different aspects of the same topic?\n4. CHRONOLOGICAL RELATIONSHIPS: How do these items relate in terms of sequence or timeline?\n5. GAPS: What important information seems to be missing across all items?\n\nFocus on substantive relationships that would be valuable for someone trying to understand the full picture across all these items. Be specific in your references to which content items contain which information.\n\nFormat your response with clear headings and concise bullet points under each section.\n\nCROSS-REFERENCE ANALYSIS:",
+  "required_inputs": ["content_items"],
+  "optional_inputs": [],
+  "outputs": ["cross_reference_analysis"],
+  "tags": ["digest", "cross-reference", "analysis", "comparison"]
+}

@@ -429,7 +429,7 @@ def _load_contentmind_components(editor: ComponentEditor) -> None:
         description="Processes PDFs for the ContentMind agent",
         template="You are the ContentMind agent, tasked with processing content from a PDF document.\n\nExtract the key information from this PDF content, organizing it in a way that preserves the document's structure while highlighting the most important information.\n\nPDF content:\n{text}\n\nProcessed content:",
         tags=["agent", "contentmind", "pdf-processing"],
-        metadata={"agent", "contentmind", "task": "process_pdf"}
+        metadata={"agent": "contentmind", "task": "process_pdf"}
     )
     upsert_component(
         id="agent_contentmind_process_audio",

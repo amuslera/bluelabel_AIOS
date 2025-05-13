@@ -6,6 +6,8 @@ import logging
 import os
 import tempfile
 import time
+import aiohttp
+import json
 from datetime import datetime
 from email.message import Message
 from typing import Dict, Any, List, Optional, Tuple, BinaryIO, Union
@@ -63,20 +65,43 @@ class EmailProcessor:
         """Check if required folders exist, create them if they don't"""
         try:
             mail = imaplib.IMAP4_SSL(self.settings.MAIL_SERVER, self.settings.MAIL_PORT)
-            mail.login(self.settings.MAIL_USERNAME, self.settings.MAIL_PASSWORD)
-            
+
+            # Login using OAuth if configured, otherwise use password
+            if self.settings.MAIL_USE_OAUTH:
+                try:
+                    # The "password" field contains the OAuth2 string when using OAuth
+                    auth_string = self.settings.MAIL_PASSWORD
+                    logger.info(f"Attempting OAuth auth with username: {self.settings.MAIL_USERNAME}")
+                    mail.authenticate('XOAUTH2', lambda x: auth_string)
+                    logger.info("Authenticated with Google using OAuth2")
+                except Exception as oauth_error:
+                    logger.error(f"OAuth2 authentication failed: {str(oauth_error)}")
+                    # Try to refresh the token via the OAuth service
+                    from app.services.gateway.google_oauth import google_oauth
+                    email, auth_string = asyncio.run(google_oauth.create_imap_access())
+                    # Update the settings
+                    self.settings.MAIL_PASSWORD = auth_string
+                    # Try again with the new token
+                    logger.info(f"Retrying with refreshed token for user: {email}")
+                    mail.authenticate('XOAUTH2', lambda x: auth_string)
+                    logger.info("Authenticated with Google using refreshed OAuth2 token")
+            else:
+                # Regular password authentication
+                logger.info(f"Using regular password auth for: {self.settings.MAIL_USERNAME}")
+                mail.login(self.settings.MAIL_USERNAME, self.settings.MAIL_PASSWORD)
+
             # Check for "Processed" folder
             status, folders = mail.list("", self.settings.MAIL_PROCESSED_FOLDER)
             if status != "OK" or not folders[0]:
                 mail.create(self.settings.MAIL_PROCESSED_FOLDER)
                 logger.info(f"Created IMAP folder: {self.settings.MAIL_PROCESSED_FOLDER}")
-            
+
             # Check for "Errors" folder
             status, folders = mail.list("", self.settings.MAIL_ERROR_FOLDER)
             if status != "OK" or not folders[0]:
                 mail.create(self.settings.MAIL_ERROR_FOLDER)
                 logger.info(f"Created IMAP folder: {self.settings.MAIL_ERROR_FOLDER}")
-                
+
             mail.logout()
         except Exception as e:
             logger.error(f"Error setting up IMAP folders: {str(e)}")
@@ -99,16 +124,44 @@ class EmailProcessor:
     
     async def process_new_emails(self) -> int:
         """Check for new emails and process them
-        
+
         Returns:
             Number of emails processed
         """
         processed_count = 0
-        
+        logger.info(f"Checking for new emails on {self.settings.MAIL_SERVER}")
+
         try:
             # Connect to IMAP server
+            logger.info(f"Connecting to IMAP server: {self.settings.MAIL_SERVER}:{self.settings.MAIL_PORT}")
             mail = imaplib.IMAP4_SSL(self.settings.MAIL_SERVER, self.settings.MAIL_PORT)
-            mail.login(self.settings.MAIL_USERNAME, self.settings.MAIL_PASSWORD)
+
+            # Login using OAuth if configured, otherwise use password
+            if self.settings.MAIL_USE_OAUTH:
+                try:
+                    # The "password" field contains the OAuth2 string when using OAuth
+                    auth_string = self.settings.MAIL_PASSWORD
+                    logger.info(f"Using OAuth to authenticate: {self.settings.MAIL_USERNAME}")
+                    mail.authenticate('XOAUTH2', lambda x: auth_string)
+                    logger.info("OAuth authentication successful")
+                except Exception as oauth_error:
+                    logger.error(f"OAuth2 authentication failed: {str(oauth_error)}")
+                    # Try to refresh the token via the OAuth service
+                    from app.services.gateway.google_oauth import google_oauth
+                    logger.info("Attempting to refresh OAuth token")
+                    email, auth_string = await google_oauth.create_imap_access()
+                    # Update the settings
+                    self.settings.MAIL_PASSWORD = auth_string
+                    # Try again with the new token
+                    logger.info(f"Retrying with refreshed token for: {email}")
+                    mail.authenticate('XOAUTH2', lambda x: auth_string)
+                    logger.info("OAuth authentication successful with refreshed token")
+            else:
+                # Regular password authentication
+                logger.info(f"Using regular password authentication: {self.settings.MAIL_USERNAME}")
+                mail.login(self.settings.MAIL_USERNAME, self.settings.MAIL_PASSWORD)
+                logger.info("Password authentication successful")
+
             mail.select(self.settings.MAIL_FOLDER)
             
             # Search for unread messages

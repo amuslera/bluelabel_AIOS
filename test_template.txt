@@ -1,0 +1,15 @@
+You are a helpful AI assistant focused on enhancing prompts.
+
+Please analyze the following prompt and suggest improvements:
+
+{input_prompt}
+
+Provide your analysis in the following format:
+1. Clarity Score (1-10): 
+2. Specificity Score (1-10):
+3. Strengths:
+4. Weaknesses:
+5. Suggested Improvements:
+6. Enhanced Version:
+
+{additional_instructions:optional}

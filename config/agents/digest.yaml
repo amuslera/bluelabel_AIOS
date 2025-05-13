@@ -1,0 +1,32 @@
+# Digest agent configuration
+id: digest
+name: Digest
+description: "Agent for generating summaries and recommendations from knowledge repository"
+version: "1.0.0"
+
+# Supported content types (source formats)
+supported_actions:
+  - retrieve
+  - analyze
+  - generate
+  - deliver
+  - schedule
+  - generate_and_deliver
+
+# Features
+features:
+  - content_aggregation
+  - pattern_identification
+  - digest_generation
+  - scheduled_delivery
+  - content_analysis
+  - connection_discovery
+
+# Digest configuration
+settings:
+  default_digest_type: daily
+  default_delivery_time: "09:00"
+  max_items_per_digest: 20
+  include_connections: true
+  include_themes: true
+  include_recommendations: true

@@ -32,8 +32,19 @@ class AgentRegistry:
 
     def register_agent(self, agent_name: str, agent_instance: BluelabelAgent):
         """Register an agent instance in the system"""
+        # Ensure the agent has the required attributes
+        if not hasattr(agent_instance, "name"):
+            agent_instance.name = agent_name
+        if not hasattr(agent_instance, "description"):
+            agent_instance.description = "No description"
+        if not hasattr(agent_instance, "supported_content_types"):
+            agent_instance.supported_content_types = []
+        if not hasattr(agent_instance, "features"):
+            agent_instance.features = []
+
+        # Register the agent instance
         self.agents[agent_name] = agent_instance
-        logger.info(f"Agent instance '{agent_name}' registered")
+        logger.info(f"Agent instance '{agent_name}' registered with capabilities: {agent_instance.get_capabilities() if hasattr(agent_instance, 'get_capabilities') else 'No capabilities'}")
 
     async def process_with_agent(self, agent_name: str, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process a request with a specific agent"""
@@ -260,13 +271,18 @@ class AgentRegistry:
                 except Exception as e:
                     logger.error(f"Error loading config file {filepath}: {str(e)}")
 
-# Singleton instance for global access
-_registry_instance = AgentRegistry()
+# Module-level singleton instance
+_registry_instance = None
 
 def get_agent_registry() -> AgentRegistry:
-    """Get the singleton agent registry instance.
-
-    Returns:
-        AgentRegistry instance
+    """Get the singleton instance of the agent registry.
+    
+    This ensures that only one registry instance exists across the entire application.
     """
+    global _registry_instance
+    if _registry_instance is None:
+        _registry_instance = AgentRegistry()
+        logger.info(f"[DEBUG] Created new registry instance with id: {id(_registry_instance)}")
+    else:
+        logger.debug(f"[DEBUG] Using existing registry instance with id: {id(_registry_instance)}")
     return _registry_instance

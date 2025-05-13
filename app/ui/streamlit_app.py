@@ -131,6 +131,14 @@ def main():
             if st.session_state.page in ["Process Content", "View Knowledge", "Search"] else 0
     )
 
+    st.sidebar.subheader("Digest Management")
+    digest_page = st.sidebar.radio(
+        "Digests",
+        ["Digest Management"],
+        index=["Digest Management"].index(st.session_state.page)
+            if st.session_state.page in ["Digest Management"] else 0
+    )
+
     st.sidebar.subheader("Prompt Management")
     prompt_page = st.sidebar.radio(
         "Prompts",
@@ -150,6 +158,8 @@ def main():
     # Determine selected page
     if content_page in ["Process Content", "View Knowledge", "Search"]:
         page = content_page
+    elif digest_page in ["Digest Management"]:
+        page = digest_page
     elif prompt_page in ["Component Editor", "Component Library"]:
         page = prompt_page
     else:
@@ -169,6 +179,9 @@ def main():
         settings_page()
     elif page == "Dashboard":
         dashboard_page()
+    elif page == "Digest Management":
+        from app.ui.pages.digest_management import render_digest_management_page
+        render_digest_management_page()
     elif page == "Component Editor":
         from app.ui.pages.component_editor import render_component_editor_page
         render_component_editor_page()
@@ -764,7 +777,14 @@ def display_processing_result(result):
 
 def view_knowledge_page():
     st.header("Knowledge Repository")
-    
+
+    # Add a link to Digest Management
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("📋 Manage Content Digests"):
+            st.session_state.page = "Digest Management"
+            st.experimental_rerun()
+
     # Tabs for different views
     view_tab, calendar_tab, tag_tab = st.tabs(["List View", "Calendar View", "Tag Explorer"])
     
@@ -1284,7 +1304,14 @@ def display_content_details(content_id):
 
 def search_page():
     st.header("Search Knowledge")
-    
+
+    # Add digest management shortcut
+    col_a, col_b = st.columns([3, 1])
+    with col_b:
+        if st.button("📋 Create Content Digest"):
+            st.session_state.page = "Digest Management"
+            st.experimental_rerun()
+
     # Two-column layout for search interface
     col1, col2 = st.columns([2, 1])
     
@@ -1752,20 +1779,20 @@ def dashboard_page():
                     
                     # Recent additions
                     st.subheader("Recently Added Content")
-                    
+
                     # Sort by creation date
                     recent_items = sorted(
-                        content_items, 
-                        key=lambda x: x.get("created_at", ""), 
+                        content_items,
+                        key=lambda x: x.get("created_at", ""),
                         reverse=True
                     )[:5]  # Show 5 most recent
-                    
+
                     for item in recent_items:
                         item_type = item.get('content_type', 'unknown')
                         icon = CONTENT_TYPE_ICONS.get(item_type, "📄")
-                        
+
                         st.markdown(f"**{icon} {item.get('title', 'Untitled')}** - {format_date(item.get('created_at', ''))}")
-                        
+
                         col1, col2 = st.columns([3, 1])
                         with col1:
                             if item.get("summary"):
@@ -1776,8 +1803,46 @@ def dashboard_page():
                                 st.session_state.selected_content_id = item.get("id")
                                 st.session_state.view_content_details = True
                                 st.experimental_rerun()
-                        
+
                         st.markdown("---")
+
+                    # Add Digest Status Section
+                    st.subheader("Digest Status")
+
+                    try:
+                        # Fetch scheduled digests
+                        digest_response = requests.get(f"{API_ENDPOINT}/scheduler/digests", params={"active_only": "true"})
+
+                        if digest_response.status_code == 200:
+                            digest_result = digest_response.json()
+
+                            if digest_result.get("status") == "success":
+                                scheduled_digests = digest_result.get("scheduled_digests", [])
+
+                                if scheduled_digests:
+                                    st.write(f"You have {len(scheduled_digests)} active digest schedules")
+
+                                    # Find the next scheduled digest
+                                    next_digests = sorted(
+                                        [d for d in scheduled_digests if d.get("next_run")],
+                                        key=lambda x: x.get("next_run", "")
+                                    )
+
+                                    if next_digests:
+                                        next_digest = next_digests[0]
+                                        st.info(f"Next digest: {next_digest.get('digest_type').title()} digest scheduled for {format_date(next_digest.get('next_run'))}")
+
+                                    # Add link to digest management
+                                    st.button("Manage Digests", on_click=lambda: setattr(st.session_state, 'page', 'Digest Management'))
+                                else:
+                                    st.info("No scheduled digests found")
+                                    st.button("Set Up Digests", on_click=lambda: setattr(st.session_state, 'page', 'Digest Management'))
+                        else:
+                            st.info("Digest scheduling not yet configured")
+                            st.button("Set Up Digests", on_click=lambda: setattr(st.session_state, 'page', 'Digest Management'))
+                    except:
+                        st.info("Digest service not available")
+                        st.button("Check Digest Management", on_click=lambda: setattr(st.session_state, 'page', 'Digest Management'))
                 else:
                     st.info("No content found in the knowledge repository.")
                     

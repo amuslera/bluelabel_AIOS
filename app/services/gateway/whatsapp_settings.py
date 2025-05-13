@@ -4,26 +4,22 @@ from typing import Optional, List, Union
 import os
 
 class WhatsAppSettings(BaseSettings):
-    """WhatsApp API settings for Meta's WhatsApp Business Cloud API"""
-
-    # WhatsApp API credentials
+    """WhatsApp settings for the WhatsApp API integration"""
+    
+    # Core settings
+    WHATSAPP_ENABLED: bool = os.environ.get("WHATSAPP_ENABLED", "False").lower() == "true"
     WHATSAPP_PHONE_ID: str = os.environ.get("WHATSAPP_PHONE_ID", "")
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = os.environ.get("WHATSAPP_BUSINESS_ACCOUNT_ID", "")
     WHATSAPP_API_TOKEN: str = os.environ.get("WHATSAPP_API_TOKEN", "")
     WHATSAPP_VERIFY_TOKEN: str = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
-
-    # Messaging settings
-    WHATSAPP_ENABLED: bool = os.environ.get("WHATSAPP_ENABLED", "False").lower() == "true"
-    WHATSAPP_ALLOWED_NUMBERS: List[str] = os.environ.get("WHATSAPP_ALLOWED_NUMBERS", "").split(",")
-    WHATSAPP_AUTO_REPLY: bool = os.environ.get("WHATSAPP_AUTO_REPLY", "True").lower() == "true"
-
-    # Webhook settings
+    
+    # Webhook configuration
     WHATSAPP_WEBHOOK_URL: str = os.environ.get("WHATSAPP_WEBHOOK_URL", "")
-
-    # Template message IDs (for notifications)
-    WHATSAPP_SUCCESS_TEMPLATE: str = os.environ.get("WHATSAPP_SUCCESS_TEMPLATE", "")
-    WHATSAPP_ERROR_TEMPLATE: str = os.environ.get("WHATSAPP_ERROR_TEMPLATE", "")
-
+    
+    # Feature settings
+    WHATSAPP_AUTO_REPLY: bool = os.environ.get("WHATSAPP_AUTO_REPLY", "True").lower() == "true"
+    WHATSAPP_ALLOWED_NUMBERS: List[str] = os.environ.get("WHATSAPP_ALLOWED_NUMBERS", "").split(",")
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

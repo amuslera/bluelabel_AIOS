@@ -122,41 +122,73 @@ class MCPComponent:
     
     def render(self, inputs: Dict[str, Any]) -> str:
         """Render the template with the provided inputs.
-        
+
         Args:
             inputs: Dictionary of input variable names and values.
-            
+
         Returns:
             The rendered template with placeholders replaced.
-            
+
         Raises:
-            ValueError: If required inputs are missing.
+            ValueError: If required inputs are missing or other issues occur.
         """
+        # Check for None or empty inputs
+        if inputs is None:
+            raise ValueError("Inputs dictionary cannot be None")
+
+        # Validate all required inputs are present
         if not self.validate_inputs(inputs):
             missing = [req for req in self.required_inputs if req not in inputs]
-            raise ValueError(f"Missing required inputs: {', '.join(missing)}")
-        
-        # For each placeholder, replace with the corresponding input
+            if len(missing) == 1:
+                raise ValueError(f"Missing required input: {missing[0]}")
+            else:
+                raise ValueError(f"Missing required inputs: {', '.join(missing)}")
+
+        # Check for None or empty values for required inputs
+        for key, value in inputs.items():
+            if key in self.required_inputs and (value is None or (isinstance(value, str) and value.strip() == "")):
+                raise ValueError(f"Required input '{key}' has an empty value")
+
+        # Create a copy of the template
         rendered = self.template
-        
-        # First pass: handle optional placeholders with format {var:optional}
-        optional_pattern = r'\{([a-zA-Z0-9_]+):optional\}'
-        
-        def optional_replace(match):
-            var_name = match.group(1)
-            if var_name in inputs:
-                return str(inputs[var_name])
-            return ""
-        
-        rendered = re.sub(optional_pattern, optional_replace, rendered)
-        
-        # Second pass: handle standard placeholders with format {var}
-        for var_name, value in inputs.items():
-            placeholder = f"{{{var_name}}}"
-            if placeholder in rendered:
-                rendered = rendered.replace(placeholder, str(value))
-        
-        return rendered
+
+        try:
+            # First pass: handle optional placeholders with format {var:optional}
+            optional_pattern = r'\{([a-zA-Z0-9_]+):optional\}'
+
+            def optional_replace(match):
+                var_name = match.group(1)
+                if var_name in inputs:
+                    value = inputs[var_name]
+                    if value is None:
+                        return ""
+                    return str(value)
+                return ""
+
+            rendered = re.sub(optional_pattern, optional_replace, rendered)
+
+            # Second pass: handle standard placeholders with format {var}
+            for var_name, value in inputs.items():
+                placeholder = f"{{{var_name}}}"
+                if placeholder in rendered:
+                    # Convert the value to string, handle None values
+                    str_value = "" if value is None else str(value)
+                    rendered = rendered.replace(placeholder, str_value)
+
+            # Check for any remaining placeholders that weren't replaced
+            remaining_placeholders = re.findall(r'\{([a-zA-Z0-9_]+)(?::([a-zA-Z0-9_]+))?\}', rendered)
+            if remaining_placeholders:
+                # Only warn about standard placeholders, not optional ones that were intentionally left empty
+                standard_placeholders = [p[0] for p in remaining_placeholders if p[1] != 'optional']
+                if standard_placeholders:
+                    logger.warning(f"Component {self.id}: Some placeholders were not replaced: {', '.join(standard_placeholders)}")
+
+            return rendered
+
+        except Exception as e:
+            # Catch any unexpected errors during rendering
+            logger.error(f"Error rendering template for component {self.id}: {str(e)}")
+            raise ValueError(f"Error rendering template: {str(e)}")
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert the component to a dictionary.

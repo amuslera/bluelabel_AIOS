@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 import json
 
 from app.core.mcp import MCPComponent, ComponentRegistry, ComponentEditor, ComponentTester
+from app.core.mcp.validator import PromptValidator
 from app.core.model_router.router import ModelRouter
 
 # Initialize router
@@ -17,6 +18,9 @@ router = APIRouter(
     tags=["components"],
     responses={404: {"description": "Component not found"}}
 )
+
+# Initialize prompt validator
+prompt_validator = PromptValidator()
 
 # Dependency for getting the component registry
 async def get_registry() -> ComponentRegistry:
@@ -242,6 +246,27 @@ async def export_component(
         return json.loads(json_str)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/analyze-template", response_model=Dict[str, Any])
+async def analyze_template(
+    template_data: Dict[str, Any] = Body(..., description="Template data to analyze")
+):
+    """Analyze a template and provide quality feedback."""
+    template = template_data.get("template", "")
+
+    if not template:
+        raise HTTPException(status_code=400, detail="Template is required")
+
+    analysis_results = prompt_validator.analyze_template(template)
+    return analysis_results
+
+@router.get("/template-examples", response_model=Dict[str, str])
+async def get_template_examples(
+    task_type: Optional[str] = Query(None, description="Optional task type to get specific examples for")
+):
+    """Get examples of well-structured templates for different tasks."""
+    examples = prompt_validator.get_template_examples(task_type)
+    return examples
 
 @router.post("/duplicate/{component_id}", response_model=Dict[str, Any])
 async def duplicate_component(

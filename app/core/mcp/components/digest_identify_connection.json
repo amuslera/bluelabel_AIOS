@@ -1,0 +1,11 @@
+{
+  "id": "digest_identify_connection",
+  "name": "Digest Connection Discovery",
+  "description": "Identifies meaningful connections between pairs of content items",
+  "version": "1.0.0",
+  "template": "You are a connection discovery specialist. Your task is to identify meaningful relationships or connections between pairs of content items.\n\nHere are the two content items:\n\n{items}\n\nAnalyze these two content items and identify any significant connections, relationships, or common threads between them. Focus on:\n\n1. Shared concepts or ideas\n2. Complementary information\n3. Cause-effect relationships\n4. Contrasting viewpoints on the same topic\n5. How one item might extend or build upon the other\n\nIf there is no meaningful connection, simply respond with \"No significant connection found.\"\n\nOtherwise, describe the connection in 1-2 clear sentences without any additional commentary.\n\nConnection:",
+  "required_inputs": ["items"],
+  "optional_inputs": [],
+  "outputs": ["connection_description"],
+  "tags": ["digest", "connections", "analysis", "relationships"]
+}

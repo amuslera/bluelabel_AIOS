@@ -1,0 +1,11 @@
+{
+  "id": "digest_extract_insights",
+  "name": "Digest Insight Extraction",
+  "description": "Extracts key insights and takeaways from multiple content items",
+  "version": "1.0.0",
+  "template": "You are an insight extraction specialist. Your task is to identify the most important insights, findings, and takeaways from a collection of content items.\n\nHere is the content to analyze:\n\n{content}\n\nYou're analyzing {num_items} different content items. Extract 5-7 key insights that represent the most valuable information from these items.\n\nFor each insight:\n1. Focus on actionable, non-obvious information\n2. Prioritize insights that synthesize information across multiple content items\n3. Write in clear, concise language\n4. Make sure each insight stands alone as a valuable takeaway\n\nFormat your response as a bulleted list of insights. Do not include any introduction or additional commentary.\n\n• ",
+  "required_inputs": ["content", "num_items"],
+  "optional_inputs": [],
+  "outputs": ["list_of_insights"],
+  "tags": ["digest", "insights", "analysis", "extraction"]
+}

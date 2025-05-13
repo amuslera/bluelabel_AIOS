@@ -78,13 +78,15 @@ def start_api_server(api_config):
     logger.info("Starting API server...")
     
     cmd = [
-        "python", "-m", "uvicorn", 
-        "app.main:app", 
+        "python3", "-m", "uvicorn",
+        "app.main:app",
         "--host", api_config.get("host", "127.0.0.1"),
-        "--port", str(api_config.get("port", 8080))
+        "--port", str(api_config.get("port", 8081)),
+        "--workers", "1"  # Always use single worker
     ]
     
-    if api_config.get("reload", True):
+    # Only add reload flag if explicitly enabled
+    if api_config.get("reload", False):
         cmd.append("--reload")
     
     try:
@@ -131,7 +133,7 @@ def start_ui_server(ui_config):
         sys.exit(1)
     
     cmd = [
-        "python", "-m", "streamlit", "run", str(ui_path),
+        "python3", "-m", "streamlit", "run", str(ui_path),
         "--server.port", str(ui_config.get("port", 8502)),
         "--server.address", ui_config.get("host", "127.0.0.1")
     ]

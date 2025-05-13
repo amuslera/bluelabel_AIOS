@@ -1,0 +1,18 @@
+name: Gateway
+description: Agent for routing content from various sources to appropriate processing agents
+supported_content_types:
+  - email
+  - whatsapp
+  - text
+  - url
+  - pdf
+  - audio
+features:
+  - content_routing
+  - source_detection
+  - agent_selection
+  - content_normalization
+  - metadata_extraction
+mcp_tasks:
+  - classify_content
+  - route_content 

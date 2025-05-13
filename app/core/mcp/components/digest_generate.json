@@ -1,0 +1,11 @@
+{
+  "id": "digest_generate",
+  "name": "Digest Generation",
+  "description": "Generates a formatted digest from content analysis results",
+  "version": "1.0.0",
+  "template": "You are a content digest specialist. Your task is to create a well-structured, informative digest from analyzed content.\n\nHere is the digest data (in JSON format):\n\n{digest_data}\n\nCreate a comprehensive digest that includes:\n\n1. A brief introduction highlighting the time period and number of items\n2. Key insights section that presents the most important takeaways\n3. Common themes section that identifies patterns across content\n4. Content summary section with brief descriptions of the most important items\n5. Notable connections between content items (if available)\n\nFormat the digest in clean HTML with appropriate headings, paragraphs, and styling. Make it visually scannable and easy to read.\n\nThe tone should be professional, concise, and factual. Focus on delivering maximum value to the reader who wants to quickly understand the most important information across all content items.\n\nHTML Digest:",
+  "required_inputs": ["digest_data"],
+  "optional_inputs": [],
+  "outputs": ["html_digest"],
+  "tags": ["digest", "generation", "formatting", "summary"]
+}

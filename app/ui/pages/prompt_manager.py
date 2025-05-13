@@ -45,6 +45,66 @@ st.markdown("""
 .sidebar-section {
     margin-bottom: 1.5rem;
 }
+.quality-high {
+    color: #22863a;
+    background-color: #e6ffec;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-weight: bold;
+}
+.quality-medium {
+    color: #e36209;
+    background-color: #fff8c5;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-weight: bold;
+}
+.quality-low {
+    color: #cb2431;
+    background-color: #ffeef0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-weight: bold;
+}
+.suggestion-item {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background-color: #f6f8fa;
+    border-left: 3px solid #0969da;
+}
+.structure-check {
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+}
+.structure-present {
+    color: #22863a;
+}
+.structure-missing {
+    color: #cb2431;
+}
+.template-example {
+    border: 1px solid #ddd;
+    border-radius: 0.3rem;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    background-color: #f6f8fa;
+    font-family: monospace;
+}
+.tab-container {
+    margin-top: 1rem;
+}
+.metric-card {
+    background-color: #f6f8fa;
+    border-radius: 0.3rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #0969da;
+}
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,6 +118,29 @@ def get_components() -> List[Dict[str, Any]]:
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching components: {e}")
         return []
+
+def analyze_template(template: str) -> Dict[str, Any]:
+    """Analyze a template for quality and provide suggestions."""
+    try:
+        response = requests.post(f"{COMPONENTS_URL}/analyze-template", json={"template": template})
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error analyzing template: {e}")
+        return {"is_valid": False, "errors": [str(e)], "warnings": [], "suggestions": []}
+
+def get_template_examples(task_type: Optional[str] = None) -> Dict[str, str]:
+    """Get template examples from the API."""
+    try:
+        url = f"{COMPONENTS_URL}/template-examples"
+        if task_type:
+            url += f"?task_type={task_type}"
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching template examples: {e}")
+        return {}
 
 def get_component(component_id: str) -> Optional[Dict[str, Any]]:
     """Fetch a specific component from the API."""

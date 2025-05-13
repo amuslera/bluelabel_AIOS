@@ -238,15 +238,15 @@ class ComponentTester:
         self.model_router = model_router
         self.result_store = TestResultStore()
     
-    def test_rendering(self, 
-                      component_id: str, 
+    def test_rendering(self,
+                      component_id: str,
                       inputs: Dict[str, Any]) -> TestResult:
         """Test the rendering of a component.
-        
+
         Args:
             component_id: ID of the component to test.
             inputs: Input values for the test.
-            
+
         Returns:
             Test result with the rendered template.
         """
@@ -259,42 +259,132 @@ class ComponentTester:
                 inputs=inputs,
                 error=f"Component not found: {component_id}"
             )
-        
+
         # Time the rendering
         start_time = time.time()
         try:
+            # Basic input validation
+            if inputs is None:
+                raise ValueError("Inputs dictionary cannot be None")
+
+            # Check for missing required inputs before rendering
+            missing_inputs = [req for req in component.required_inputs if req not in inputs]
+            if missing_inputs:
+                missing_str = ", ".join(missing_inputs)
+                if len(missing_inputs) == 1:
+                    error_msg = f"Missing required input: {missing_str}"
+                else:
+                    error_msg = f"Missing required inputs: {missing_str}"
+
+                # Return a detailed error result
+                return TestResult(
+                    component_id=component_id,
+                    component_version=component.version,
+                    inputs=inputs,
+                    error=error_msg,
+                    metrics={
+                        "render_time_ms": 0,
+                        "missing_inputs": missing_inputs
+                    }
+                )
+
+            # Check for empty required inputs
+            empty_inputs = []
+            for key, value in inputs.items():
+                if key in component.required_inputs and (value is None or (isinstance(value, str) and value.strip() == "")):
+                    empty_inputs.append(key)
+
+            if empty_inputs:
+                warnings = [f"Required input '{key}' has an empty value" for key in empty_inputs]
+                logger.warning(f"Component {component_id}: {'; '.join(warnings)}")
+
+            # Render the template
             rendered = component.render(inputs)
             end_time = time.time()
-            
+
+            # Check for unused inputs
+            unused_inputs = [key for key in inputs if key not in component.required_inputs and key not in component.optional_inputs]
+
+            # Metrics and warnings
+            metrics = {
+                "render_time_ms": round((end_time - start_time) * 1000, 2)
+            }
+
+            # Add warnings to metrics if any
+            warnings = []
+            if empty_inputs:
+                warnings.extend([f"Empty value for required input: {k}" for k in empty_inputs])
+            if unused_inputs:
+                warnings.append(f"Unused inputs: {', '.join(unused_inputs)}")
+                metrics["unused_inputs"] = unused_inputs
+
+            if warnings:
+                metrics["warnings"] = warnings
+
             # Create test result
             result = TestResult(
                 component_id=component_id,
                 component_version=component.version,
                 inputs=inputs,
                 result=rendered,
-                metrics={
-                    "render_time_ms": round((end_time - start_time) * 1000, 2)
-                }
+                metrics=metrics
             )
-            
+
             # Store the result
             self.result_store.add_result(result)
             return result
-        
+
         except ValueError as e:
             end_time = time.time()
-            
+            error_msg = str(e)
+
+            # Extract useful information from the error message
+            metrics = {
+                "render_time_ms": round((end_time - start_time) * 1000, 2)
+            }
+
+            # Extract missing inputs from error message if present
+            if "Missing required input" in error_msg:
+                try:
+                    # Try to parse missing inputs from the error message
+                    if ":" in error_msg:
+                        missing_part = error_msg.split(":")[1].strip()
+                        missing_inputs = [i.strip() for i in missing_part.split(",")]
+                        metrics["missing_inputs"] = missing_inputs
+                except:
+                    # If parsing fails, just continue without adding to metrics
+                    pass
+
             # Create failed test result
             result = TestResult(
                 component_id=component_id,
                 component_version=component.version,
                 inputs=inputs,
-                error=str(e),
+                error=error_msg,
+                metrics=metrics
+            )
+
+            # Store the result
+            self.result_store.add_result(result)
+            return result
+
+        except Exception as e:
+            end_time = time.time()
+
+            # Log unexpected errors
+            logger.error(f"Unexpected error testing component {component_id}: {str(e)}")
+
+            # Create failed test result for unexpected errors
+            result = TestResult(
+                component_id=component_id,
+                component_version=component.version,
+                inputs=inputs,
+                error=f"Unexpected error: {str(e)}",
                 metrics={
                     "render_time_ms": round((end_time - start_time) * 1000, 2)
                 }
             )
-            
+
             # Store the result
             self.result_store.add_result(result)
             return result

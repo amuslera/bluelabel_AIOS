@@ -144,44 +144,90 @@ class ComponentEditor:
     
     def validate_template(self, template: str) -> Tuple[bool, List[str], List[str]]:
         """Validate a template for correctness.
-        
+
         Args:
             template: The template to validate.
-            
+
         Returns:
             A tuple containing (is_valid, errors, warnings).
         """
         errors = []
         warnings = []
-        
+
         # Check for empty template
-        if not template.strip():
+        if not template or not template.strip():
             errors.append("Template cannot be empty")
             return False, errors, warnings
-        
+
+        # Check for minimum content length
+        if len(template.strip()) < 10:
+            warnings.append("Template is very short, might not be useful")
+
         # Extract placeholders
         placeholder_pattern = r'\{([a-zA-Z0-9_]+)(?::([a-zA-Z0-9_]+))?\}'
         placeholders = re.findall(placeholder_pattern, template)
-        
+
         if not placeholders:
-            warnings.append("Template contains no placeholders")
-        
+            warnings.append("Template contains no placeholders - this will be a static prompt")
+
         # Check for unclosed braces
         open_count = template.count("{")
         close_count = template.count("}")
         if open_count != close_count:
             errors.append(f"Mismatched braces: {open_count} opening and {close_count} closing braces")
-        
+
+            # Attempt to locate the position of the mismatched brace
+            if open_count > close_count:
+                # Find unmatched opening braces
+                remaining = open_count - close_count
+                lines = template.split('\n')
+                line_num = 1
+                char_count = 0
+                brace_positions = []
+
+                for i, line in enumerate(lines):
+                    brace_count = 0
+                    for j, char in enumerate(line):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            if brace_count > 0:
+                                brace_count -= 1
+
+                    if brace_count > 0:
+                        brace_positions.append(f"line {i+1}")
+
+                if brace_positions:
+                    errors.append(f"Unclosed opening braces found near: {', '.join(brace_positions[:3])}")
+
         # Check for invalid placeholder syntax
         invalid_placeholders = re.findall(r'\{([^a-zA-Z0-9_:{}].*?)\}', template)
         if invalid_placeholders:
             for invalid in invalid_placeholders:
                 errors.append(f"Invalid placeholder syntax: {{{invalid}}}")
-        
+
         # Check for potentially problematic whitespace
-        if re.search(r'\{\s+[a-zA-Z0-9_]+\s*\}', template):
-            warnings.append("Some placeholders contain whitespace which may cause issues")
-        
+        whitespace_placeholders = re.findall(r'\{\s+([a-zA-Z0-9_]+)\s*\}', template)
+        if whitespace_placeholders:
+            for placeholder in whitespace_placeholders:
+                warnings.append(f"Placeholder '{placeholder}' contains extra whitespace which may cause issues")
+
+        # Check for duplicate placeholders that have inconsistent optional marking
+        placeholder_map = {}
+        for match in placeholders:
+            var_name = match[0]
+            is_optional = match[1] == 'optional'
+
+            if var_name in placeholder_map and placeholder_map[var_name] != is_optional:
+                warnings.append(f"Placeholder '{var_name}' is marked as both required and optional in different places")
+            else:
+                placeholder_map[var_name] = is_optional
+
+        # Check for potentially problematic characters in placeholders
+        for placeholder, _ in placeholders:
+            if not placeholder.isalnum() and '_' not in placeholder:
+                warnings.append(f"Placeholder '{placeholder}' contains only numbers or special characters")
+
         is_valid = len(errors) == 0
         return is_valid, errors, warnings
     
@@ -214,41 +260,77 @@ class ComponentEditor:
         
         return required_inputs, optional_inputs
     
-    def preview_rendered_template(self, 
-                                  template: str, 
-                                  inputs: Dict[str, str]) -> Tuple[str, List[str]]:
+    def preview_rendered_template(self,
+                                  template: str,
+                                  inputs: Dict[str, Any]) -> Tuple[str, List[str], List[str]]:
         """Preview the rendered template with the given inputs.
-        
+
         Args:
             template: The template to render.
             inputs: Dictionary of input variable names and values.
-            
+
         Returns:
-            A tuple containing (rendered_template, missing_inputs).
+            A tuple containing (rendered_template, missing_inputs, warnings).
         """
-        # Extract required inputs
-        required_inputs, _ = self.extract_inputs_from_template(template)
-        
+        warnings = []
+
+        # Validate template first
+        is_valid, errors, template_warnings = self.validate_template(template)
+        warnings.extend(template_warnings)
+
+        if errors:
+            return f"Cannot render template due to errors: {'; '.join(errors)}", [], warnings
+
+        # Extract required and optional inputs
+        required_inputs, optional_inputs = self.extract_inputs_from_template(template)
+
         # Check for missing inputs
         missing_inputs = [req for req in required_inputs if req not in inputs]
-        
+
+        # Check for empty inputs
+        for key, value in inputs.items():
+            if key in required_inputs and (value is None or (isinstance(value, str) and value.strip() == "")):
+                warnings.append(f"Required input '{key}' has an empty value")
+
+        # Check for inputs provided but not used in the template
+        unused_inputs = [key for key in inputs if key not in required_inputs and key not in optional_inputs]
+        if unused_inputs:
+            warnings.append(f"Some provided inputs are not used in the template: {', '.join(unused_inputs)}")
+
         # Create a temporary component for rendering
         temp_component = MCPComponent(
             name="Preview",
             description="Temporary component for preview",
-            template=template
+            template=template,
+            required_inputs=required_inputs,
+            optional_inputs=optional_inputs
         )
-        
+
         # Render the template, providing placeholder values for missing inputs
         render_inputs = inputs.copy()
         for missing in missing_inputs:
             render_inputs[missing] = f"[{missing}]"
-        
+            warnings.append(f"Using placeholder '[{missing}]' for missing required input")
+
         try:
             rendered = temp_component.render(render_inputs)
-            return rendered, missing_inputs
+
+            # Check for any remaining placeholders
+            remaining_placeholders = re.findall(r'\{([a-zA-Z0-9_]+)(?::([a-zA-Z0-9_]+))?\}', rendered)
+            if remaining_placeholders:
+                standard_placeholders = [p[0] for p in remaining_placeholders if p[1] != 'optional']
+                if standard_placeholders:
+                    warnings.append(f"Some placeholders were not replaced: {', '.join(standard_placeholders)}")
+
+            return rendered, missing_inputs, warnings
+
         except ValueError as e:
-            return f"Error rendering template: {str(e)}", missing_inputs
+            error_msg = str(e)
+            return f"Error rendering template: {error_msg}", missing_inputs, warnings
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Unexpected error during template preview: {error_msg}")
+            return f"Unexpected error during preview: {error_msg}", missing_inputs, warnings
     
     def duplicate_component(self, 
                            component_id: str, 
@@ -291,45 +373,95 @@ class ComponentEditor:
     
     def validate_component(self, component: MCPComponent) -> Tuple[bool, List[str], List[str]]:
         """Validate a component for correctness.
-        
+
         Args:
             component: The component to validate.
-            
+
         Returns:
             A tuple containing (is_valid, errors, warnings).
         """
         errors = []
         warnings = []
-        
+
+        # Validate ID
+        if not component.id or not component.id.strip():
+            errors.append("Component ID cannot be empty")
+
         # Validate name
-        if not component.name.strip():
+        if not component.name or not component.name.strip():
             errors.append("Component name cannot be empty")
-        
+        elif len(component.name.strip()) < 3:
+            warnings.append("Component name is very short, consider using a more descriptive name")
+
         # Validate description
-        if not component.description.strip():
+        if not component.description or not component.description.strip():
             warnings.append("Component has no description")
-        
+        elif len(component.description.strip()) < 10:
+            warnings.append("Component description is very short, consider adding more detail")
+
+        # Validate version format
+        if not re.match(r'^\d+\.\d+\.\d+$', component.version):
+            errors.append(f"Invalid version format: {component.version}. Expected format: X.Y.Z (e.g. 1.0.0)")
+
         # Validate template
         is_valid, template_errors, template_warnings = self.validate_template(component.template)
         errors.extend(template_errors)
         warnings.extend(template_warnings)
-        
+
         # Verify placeholder consistency with required_inputs and optional_inputs
         req_inputs, opt_inputs = self.extract_inputs_from_template(component.template)
-        
+
         # Check if component has inputs not in template
+        missing_required_inputs = []
         for input_name in component.required_inputs:
             if input_name not in req_inputs and input_name not in opt_inputs:
-                warnings.append(f"Required input '{input_name}' not found in template")
-        
+                missing_required_inputs.append(input_name)
+
+        if missing_required_inputs:
+            if len(missing_required_inputs) > 3:
+                warnings.append(f"Several required inputs not found in template ({len(missing_required_inputs)} total)")
+                warnings.append(f"First few missing inputs: {', '.join(missing_required_inputs[:3])}")
+            else:
+                warnings.append(f"Required input(s) not found in template: {', '.join(missing_required_inputs)}")
+
+        missing_optional_inputs = []
         for input_name in component.optional_inputs:
             if input_name not in req_inputs and input_name not in opt_inputs:
-                warnings.append(f"Optional input '{input_name}' not found in template")
-        
-        # Check if template has inputs not in component
+                missing_optional_inputs.append(input_name)
+
+        if missing_optional_inputs:
+            if len(missing_optional_inputs) > 3:
+                warnings.append(f"Several optional inputs not found in template ({len(missing_optional_inputs)} total)")
+                warnings.append(f"First few missing inputs: {', '.join(missing_optional_inputs[:3])}")
+            else:
+                warnings.append(f"Optional input(s) not found in template: {', '.join(missing_optional_inputs)}")
+
+        # Check if template has variables not in component inputs
+        unlisted_inputs = []
         for input_name in req_inputs:
             if input_name not in component.required_inputs and input_name not in component.optional_inputs:
-                warnings.append(f"Template variable '{input_name}' not listed in component inputs")
-        
+                unlisted_inputs.append(input_name)
+
+        if unlisted_inputs:
+            if len(unlisted_inputs) > 3:
+                warnings.append(f"Several template variables not listed in component inputs ({len(unlisted_inputs)} total)")
+                warnings.append(f"First few unlisted variables: {', '.join(unlisted_inputs[:3])}")
+            else:
+                warnings.append(f"Template variable(s) not listed in component inputs: {', '.join(unlisted_inputs)}")
+
+        # Validate tags
+        if not component.tags:
+            warnings.append("Component has no tags. Tags help with organization and discoverability")
+        else:
+            # Check for very short tags
+            short_tags = [tag for tag in component.tags if len(tag) < 3]
+            if short_tags:
+                warnings.append(f"Some tags are very short: {', '.join(short_tags)}")
+
+        # Check for duplicate inputs in both required and optional
+        duplicate_inputs = set(component.required_inputs) & set(component.optional_inputs)
+        if duplicate_inputs:
+            errors.append(f"Input(s) listed as both required and optional: {', '.join(duplicate_inputs)}")
+
         is_valid = len(errors) == 0
         return is_valid, errors, warnings

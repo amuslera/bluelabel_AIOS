@@ -13,6 +13,7 @@ class EmailSettings(BaseSettings):
     MAIL_PASSWORD: str = os.environ.get("MAIL_PASSWORD", "")
     MAIL_USE_SSL: bool = os.environ.get("MAIL_USE_SSL", "True").lower() == "true"
     MAIL_USE_TLS: bool = os.environ.get("MAIL_USE_TLS", "False").lower() == "true"
+    MAIL_USE_OAUTH: bool = os.environ.get("MAIL_USE_OAUTH", "False").lower() == "true"
 
     # Outbound (SMTP) settings
     MAIL_FROM: str = os.environ.get("MAIL_FROM", "")
@@ -23,6 +24,7 @@ class EmailSettings(BaseSettings):
     SMTP_PASSWORD: str = os.environ.get("SMTP_PASSWORD", "")
     SMTP_USE_SSL: bool = os.environ.get("SMTP_USE_SSL", "False").lower() == "true"
     SMTP_USE_TLS: bool = os.environ.get("SMTP_USE_TLS", "True").lower() == "true"
+    SMTP_USE_OAUTH: bool = os.environ.get("SMTP_USE_OAUTH", "False").lower() == "true"
 
     # Processing settings
     MAIL_CHECK_INTERVAL: int = int(os.environ.get("MAIL_CHECK_INTERVAL", "300"))  # Seconds

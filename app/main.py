@@ -1,9 +1,12 @@
 # app/main.py
+import os
+print(f"[DEBUG] Running main.py from: {os.path.abspath(__file__)}")
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import logging
 from typing import Dict, Any, List, Optional
+import traceback
 
 from app.core.config import settings
 from app.core.model_router.router import ModelRouter
@@ -32,6 +35,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+try:
+    from app.api.routes.gateway import router as gateway_router
+    app.include_router(gateway_router)
+    logger.info("Gateway API routes included")
+except ImportError as e:
+    logger.warning(f"Could not import gateway routes: {e}")
+
+try:
+    from app.api.routes.scheduler import router as scheduler_router
+    app.include_router(scheduler_router)
+    logger.info("Scheduler API routes included")
+except ImportError as e:
+    logger.warning(f"Could not import scheduler routes: {e}")
+
+try:
+    from app.api.routes.components import router as components_router
+    app.include_router(components_router)
+    logger.info("Component API routes included")
+except ImportError as e:
+    logger.warning(f"Could not import component routes: {e}")
 
 # Initialize MCP system
 try:
@@ -89,6 +114,52 @@ try:
             logger.info("ContentMind agent initialized successfully (direct instantiation)")
             # Register the instance in the registry
             agent_registry.register_agent("contentmind", content_mind)
+
+    # Initialize Digest agent
+    digest_agent = None
+    if "digest" in agent_registry.list_agent_classes():
+        digest_agent = agent_registry.create_agent("digest", model_router)
+        if digest_agent:
+            logger.info("Digest agent initialized successfully")
+        else:
+            logger.error("Failed to create Digest agent instance")
+    else:
+        # Import directly if needed
+        try:
+            from app.agents.digest.agent import DigestAgent
+            digest_agent = DigestAgent({"id": "digest"}, model_router) if model_router else None
+            if digest_agent:
+                logger.info("Digest agent initialized successfully (direct instantiation)")
+                # Register the instance in the registry
+                agent_registry.register_agent("digest", digest_agent)
+        except Exception as e:
+            logger.error(f"Failed to directly instantiate Digest agent: {str(e)}")
+
+    # Initialize Gateway agent
+    gateway_agent = None
+    try:
+        from app.agents.gateway.agent import GatewayAgent
+        # Register the Gateway agent class first
+        agent_registry.register_class("gateway", GatewayAgent)
+        
+        # Get the Gateway agent configuration
+        gateway_config = agent_registry.get_agent_config("gateway")
+        if not gateway_config:
+            logger.warning("No configuration found for Gateway agent, using default")
+            gateway_config = {"id": "gateway"}
+        
+        # Create Gateway agent with configuration
+        gateway_agent = GatewayAgent(gateway_config, model_router) if model_router else None
+        if gateway_agent:
+            logger.info("Gateway agent initialized successfully (direct instantiation)")
+            # Register the instance in the registry
+            agent_registry.register_agent("gateway", gateway_agent)
+            logger.info(f"[DEBUG] main.py: Registry id: {id(agent_registry)}, Gateway agent id: {id(gateway_agent)}")
+        else:
+            logger.error("Failed to create Gateway agent instance")
+    except Exception as e:
+        logger.error(f"Failed to initialize Gateway agent: {str(e)}")
+        logger.error(traceback.format_exc())
 except Exception as e:
     logger.error(f"Failed to initialize agent registry or ContentMind agent: {str(e)}")
     # Continue without the agent
@@ -100,6 +171,39 @@ try:
     logger.info("Database tables created successfully")
 except Exception as e:
     logger.error(f"Failed to create database tables: {str(e)}")
+
+# Initialize and start scheduler service
+try:
+    from app.services.scheduler.scheduler_service import scheduler_service
+
+    @app.on_event("startup")
+    async def start_scheduler():
+        logger.info("Starting scheduler service")
+        await scheduler_service.start()
+
+        # Register digest agent callback
+        agent_registry = get_agent_registry()
+        digest_agent = agent_registry.get_agent("digest")
+
+        if digest_agent:
+            # Register callbacks for different digest types
+            for digest_type in ["daily", "weekly", "monthly", "custom"]:
+                scheduler_service.register_callback(
+                    f"digest_{digest_type}",
+                    digest_agent.process
+                )
+            logger.info("Registered digest agent callbacks with scheduler")
+        else:
+            logger.warning("Digest agent not available for scheduler callbacks")
+
+    @app.on_event("shutdown")
+    async def stop_scheduler():
+        logger.info("Stopping scheduler service")
+        await scheduler_service.stop()
+
+    logger.info("Scheduler service initialized")
+except Exception as e:
+    logger.error(f"Failed to initialize scheduler service: {str(e)}")
 
 # Dependency for KnowledgeService
 def get_knowledge_service(db: Session = Depends(get_db)):
@@ -130,6 +234,7 @@ async def root():
 async def list_agents():
     """List all available agents and their capabilities"""
     agent_registry = get_agent_registry()
+    logger.info(f"[DEBUG] /agents endpoint: Registry id: {id(agent_registry)}, agent instances: {list(agent_registry.agents.keys())}")
 
     # Get available agent classes
     available_classes = agent_registry.list_agent_classes()
@@ -147,9 +252,18 @@ async def list_agents():
     for agent_id in set(available_classes) | set(agent_instances.keys()):
         agent_info = {"id": agent_id}
 
-        # Add capabilities if we have an instance
-        if agent_id in agent_instances:
-            agent_info.update(agent_instances[agent_id])
+        # Check if agent is instantiated in the registry
+        if agent_id in agent_registry.agents:
+            agent_info["status"] = "instantiated"
+            # Get agent instance
+            agent_instance = agent_registry.agents[agent_id]
+            # Add capabilities from instance
+            agent_info.update({
+                "name": agent_instance.name if hasattr(agent_instance, "name") else agent_id,
+                "description": agent_instance.description if hasattr(agent_instance, "description") else "No description",
+                "supported_content_types": agent_instance.supported_content_types if hasattr(agent_instance, "supported_content_types") else [],
+                "features": agent_instance.features if hasattr(agent_instance, "features") else []
+            })
         else:
             # Add basic info for non-instantiated agent classes
             agent_info["status"] = "not_instantiated"
@@ -376,9 +490,25 @@ async def health():
     health_status["ok"] = all(health_status.values())
     return health_status
 
+@app.get("/debug/agents")
+async def debug_agents():
+    agent_registry = get_agent_registry()
+    return {
+        "registry_id": id(agent_registry),
+        "agents": {k: str(v) + f" (id={id(v)})" for k, v in agent_registry.agents.items()}
+    }
+
 # Include API routes
 from app.api.routes.components import router as components_router
 app.include_router(components_router)
+
+# Include Scheduler API routes
+try:
+    from app.api.routes.scheduler import router as scheduler_router
+    app.include_router(scheduler_router)
+    logger.info("Scheduler API routes included")
+except ImportError as e:
+    logger.warning(f"Scheduler API routes not included: {str(e)}")
 
 # Include Gateway API routes (optional)
 try:
@@ -387,8 +517,3 @@ try:
     logger.info("Gateway API routes included")
 except ImportError as e:
     logger.warning(f"Gateway API routes not included due to missing dependencies: {str(e)}")
-
-# If run directly, start the server
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)

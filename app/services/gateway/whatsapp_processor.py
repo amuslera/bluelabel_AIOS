@@ -1,453 +1,324 @@
-# app/services/gateway/whatsapp_processor.py
-import logging
 import os
-import tempfile
-import base64
-from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple, Union
-import json
 import asyncio
+import logging
+import tempfile
+import json
+import base64
 import aiohttp
+from typing import Dict, Any, List, Optional, BinaryIO
+from datetime import datetime
 from pydantic import BaseModel
-
-# WhatsApp API client class stub (replaced with direct HTTP requests)
-# The wa_me library has compatibility issues, so we'll use direct API calls
-class WhatsAppClient:
-    """Wrapper for WhatsApp API calls using direct HTTP requests"""
-
-    def __init__(self, token: str, phone_number_id: str):
-        self.token = token
-        self.phone_number_id = phone_number_id
-        self.base_url = f"https://graph.facebook.com/v18.0/{phone_number_id}"
-        self.headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
-    async def send_message(self, recipient: str, message: str) -> Dict[str, Any]:
-        """Send a text message to a WhatsApp user
-
-        Args:
-            recipient: The WhatsApp ID of the recipient
-            message: The message content
-
-        Returns:
-            API response
-        """
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": recipient,
-            "type": "text",
-            "text": {
-                "body": message
-            }
-        }
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/messages",
-                    headers=self.headers,
-                    json=payload
-                ) as response:
-                    return await response.json()
-        except Exception as e:
-            logger.error(f"Error sending WhatsApp message: {str(e)}")
-            return {"error": str(e)}
-
-    async def get_media_url(self, media_id: str) -> Dict[str, Any]:
-        """Get the URL for a media item
-
-        Args:
-            media_id: The ID of the media
-
-        Returns:
-            Media URL response
-        """
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"https://graph.facebook.com/v18.0/{media_id}",
-                    headers=self.headers
-                ) as response:
-                    return await response.json()
-        except Exception as e:
-            logger.error(f"Error getting media URL: {str(e)}")
-            return {"error": str(e)}
-
-from app.services.gateway.whatsapp_settings import whatsapp_settings
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 class WhatsAppContent(BaseModel):
     """Represents content extracted from a WhatsApp message"""
-    wa_id: str  # WhatsApp ID of the sender
-    phone_number: str  # Phone number of the sender
-    message_id: str  # WhatsApp message ID
-    timestamp: str  # Message timestamp
-    message_type: str  # Type of message (text, image, document, etc)
-    content_type: str  # Type of content (text, url, pdf, audio, etc)
-    content: Union[str, bytes, None] = None  # The actual content
-    content_filename: Optional[str] = None  # Filename if it's a document
-    metadata: Dict[str, Any] = {}  # Additional metadata
+    wa_id: str
+    message_id: str
+    message_type: str  # text, image, video, audio, document
+    timestamp: str
+    text: Optional[str] = None
+    content_type: Optional[str] = None  # MIME type or general type (pdf, audio, etc.)
+    content: Optional[bytes] = None  # Binary content for files
+    content_filename: Optional[str] = None
+    metadata: Dict[str, Any] = {}
 
 class WhatsAppProcessor:
-    """Service for processing WhatsApp messages and extracting content for AIOS"""
-    
+    """Process WhatsApp messages for AIOS"""
+
     def __init__(self):
-        """Initialize the WhatsApp processor with configuration settings"""
-        self.settings = whatsapp_settings
+        """Initialize WhatsApp processor"""
         self.logger = logging.getLogger(__name__)
+        self.whatsapp = None  # Will be set with the WhatsApp client implementation
 
-        # Initialize the WhatsApp API client
-        if self.settings.WHATSAPP_API_TOKEN and self.settings.WHATSAPP_PHONE_ID:
-            self.whatsapp = WhatsAppClient(
-                token=self.settings.WHATSAPP_API_TOKEN,
-                phone_number_id=self.settings.WHATSAPP_PHONE_ID
-            )
-        else:
-            self.whatsapp = None
-            self.logger.warning("WhatsApp API credentials not configured")
-    
-    async def process_webhook_event(self, body: Dict[str, Any]) -> Dict[str, Any]:
-        """Process incoming webhook events from WhatsApp
-        
-        Args:
-            body: The webhook event body from WhatsApp
-            
-        Returns:
-            Processing result with status and message count
-        """
-        if not self.whatsapp:
-            return {"status": "error", "message": "WhatsApp API not configured"}
-        
-        try:
-            # Extract messages from the webhook payload
-            entry = body.get("entry", [])
-            messages_processed = 0
-            
-            for entry_item in entry:
-                changes = entry_item.get("changes", [])
-                for change in changes:
-                    if change.get("field") != "messages":
-                        continue
-                    
-                    value = change.get("value", {})
-                    messages = value.get("messages", [])
-                    
-                    # Process each message
-                    for message_data in messages:
-                        # Process the message
-                        message_id = message_data.get("id")
-                        from_id = value.get("contacts", [{}])[0].get("wa_id") if value.get("contacts") else None
-                        
-                        if not from_id or not message_id:
-                            continue
-                        
-                        # Check if sender is allowed
-                        if self.settings.WHATSAPP_ALLOWED_NUMBERS and from_id not in self.settings.WHATSAPP_ALLOWED_NUMBERS:
-                            self.logger.warning(f"Message from unauthorized sender: {from_id}")
-                            continue
-                        
-                        # Extract the message content
-                        whatsapp_content = await self._extract_content(message_data, from_id, value)
-                        
-                        if not whatsapp_content:
-                            continue
-                        
-                        # Process the content
-                        process_result = await self._process_content_for_aios(whatsapp_content)
-                        
-                        # Send a reply if configured
-                        if self.settings.WHATSAPP_AUTO_REPLY:
-                            await self._send_processing_notification(whatsapp_content, process_result)
-                        
-                        messages_processed += 1
-                        
-            return {
-                "status": "success",
-                "messages_processed": messages_processed
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error processing WhatsApp webhook: {str(e)}")
-            return {
-                "status": "error",
-                "message": f"Error processing webhook: {str(e)}"
-            }
-    
-    async def _extract_content(self, message_data: Dict[str, Any], from_id: str, value: Dict[str, Any]) -> Optional[WhatsAppContent]:
-        """Extract content from a WhatsApp message
-        
-        Args:
-            message_data: The message data from the webhook
-            from_id: The WhatsApp ID of the sender
-            value: The value object from the webhook
-            
-        Returns:
-            Extracted WhatsApp content or None if extraction failed
-        """
-        try:
-            message_id = message_data.get("id")
-            timestamp = message_data.get("timestamp", str(int(datetime.now().timestamp())))
-            
-            # Get sender's profile information
-            phone_number = from_id  # Default to the WhatsApp ID
-            profile_name = None
-            
-            if value.get("contacts") and len(value["contacts"]) > 0:
-                contact = value["contacts"][0]
-                profile_name = contact.get("profile", {}).get("name")
-            
-            # Initialize metadata
-            metadata = {
-                "source": "whatsapp",
-                "sender": from_id,
-                "sender_name": profile_name,
-                "timestamp": timestamp
-            }
-            
-            # Determine message type and extract content
-            message_type = next(iter(message_data.keys() & {"text", "image", "document", "audio", "video", "sticker"}), None)
-            
-            if not message_type:
-                self.logger.warning(f"Unsupported message type for message {message_id}")
-                return None
-            
-            # Process based on message type
-            if message_type == "text":
-                # Extract text content
-                text = message_data.get("text", {}).get("body", "")
-                
-                # Check if it's a URL
-                if text.strip().startswith(("http://", "https://")):
-                    return WhatsAppContent(
-                        wa_id=from_id,
-                        phone_number=phone_number,
-                        message_id=message_id,
-                        timestamp=timestamp,
-                        message_type="text",
-                        content_type="url",
-                        content=text.strip(),
-                        metadata=metadata
-                    )
-                else:
-                    return WhatsAppContent(
-                        wa_id=from_id,
-                        phone_number=phone_number,
-                        message_id=message_id,
-                        timestamp=timestamp,
-                        message_type="text",
-                        content_type="text",
-                        content=text,
-                        metadata=metadata
-                    )
-            
-            elif message_type == "image":
-                # Get the image data
-                image_id = message_data.get("image", {}).get("id")
-                if not image_id:
-                    return None
-                
-                # Download the media
-                media_data = await self._download_media(image_id)
-                if not media_data:
-                    return None
-                
-                return WhatsAppContent(
-                    wa_id=from_id,
-                    phone_number=phone_number,
-                    message_id=message_id,
-                    timestamp=timestamp,
-                    message_type="image",
-                    content_type="image",
-                    content=media_data,
-                    content_filename=f"image_{message_id}.jpg",
-                    metadata=metadata
-                )
-            
-            elif message_type == "document":
-                # Get the document data
-                document = message_data.get("document", {})
-                document_id = document.get("id")
-                filename = document.get("filename", f"document_{message_id}")
-                
-                if not document_id:
-                    return None
-                
-                # Download the media
-                media_data = await self._download_media(document_id)
-                if not media_data:
-                    return None
-                
-                # Determine content type from filename
-                if filename.lower().endswith(".pdf"):
-                    content_type = "pdf"
-                elif filename.lower().endswith((".txt", ".md", ".csv")):
-                    content_type = "text"
-                else:
-                    content_type = "document"
-                
-                return WhatsAppContent(
-                    wa_id=from_id,
-                    phone_number=phone_number,
-                    message_id=message_id,
-                    timestamp=timestamp,
-                    message_type="document",
-                    content_type=content_type,
-                    content=media_data,
-                    content_filename=filename,
-                    metadata=metadata
-                )
-            
-            elif message_type == "audio":
-                # Get the audio data
-                audio_id = message_data.get("audio", {}).get("id")
-                if not audio_id:
-                    return None
-                
-                # Download the media
-                media_data = await self._download_media(audio_id)
-                if not media_data:
-                    return None
-                
-                return WhatsAppContent(
-                    wa_id=from_id,
-                    phone_number=phone_number,
-                    message_id=message_id,
-                    timestamp=timestamp,
-                    message_type="audio",
-                    content_type="audio",
-                    content=media_data,
-                    content_filename=f"audio_{message_id}.mp3",
-                    metadata=metadata
-                )
-            
-            elif message_type == "video":
-                # Get the video data
-                video_id = message_data.get("video", {}).get("id")
-                if not video_id:
-                    return None
-                
-                # Download the media
-                media_data = await self._download_media(video_id)
-                if not media_data:
-                    return None
-                
-                return WhatsAppContent(
-                    wa_id=from_id,
-                    phone_number=phone_number,
-                    message_id=message_id,
-                    timestamp=timestamp,
-                    message_type="video",
-                    content_type="video",
-                    content=media_data,
-                    content_filename=f"video_{message_id}.mp4",
-                    metadata=metadata
-                )
-            
-            elif message_type == "sticker":
-                # Stickers are not processed for content
-                # but we can acknowledge receipt
-                return WhatsAppContent(
-                    wa_id=from_id,
-                    phone_number=phone_number,
-                    message_id=message_id,
-                    timestamp=timestamp,
-                    message_type="sticker",
-                    content_type="image",
-                    content=None,
-                    metadata=metadata
-                )
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"Error extracting WhatsApp content: {str(e)}")
-            return None
-    
-    async def _download_media(self, media_id: str) -> Optional[bytes]:
-        """Download media from WhatsApp
-        
-        Args:
-            media_id: The ID of the media to download
-            
-        Returns:
-            The media data as bytes or None if download failed
-        """
-        if not self.whatsapp:
-            return None
-        
-        try:
-            # Use the WhatsApp API to get media URL
-            media_url_response = await self.whatsapp.get_media_url(media_id)
-            
-            if not media_url_response or not media_url_response.get("url"):
-                self.logger.error(f"Failed to get media URL for media ID: {media_id}")
-                return None
-            
-            media_url = media_url_response["url"]
-            
-            # Download the media file
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    media_url,
-                    headers={"Authorization": f"Bearer {self.settings.WHATSAPP_API_TOKEN}"}
-                ) as response:
-                    if response.status != 200:
-                        self.logger.error(f"Failed to download media for ID {media_id}: Status {response.status}")
-                        return None
-                    
-                    return await response.read()
-                    
-        except Exception as e:
-            self.logger.error(f"Error downloading media {media_id}: {str(e)}")
-            return None
-    
-    async def _process_content_for_aios(self, whatsapp_content: WhatsAppContent) -> Dict[str, Any]:
-        """Process the extracted content through the Gateway agent
+    async def process_webhook_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a WhatsApp webhook event
 
         Args:
-            whatsapp_content: Extracted WhatsApp content
+            event_data: Webhook event data from Meta API
 
         Returns:
             Processing result
         """
         try:
-            # Determine content to process
-            content_to_process = whatsapp_content.content
+            # Check if this is a valid WhatsApp webhook event
+            if "object" not in event_data:
+                return {"status": "error", "message": "Invalid webhook event"}
 
-            # If it's bytes data (like for PDFs or audio), save to a temp file and encode as base64
-            if isinstance(content_to_process, bytes):
-                # Create a temporary file
-                suffix = ""
-                if whatsapp_content.content_filename:
-                    suffix = os.path.splitext(whatsapp_content.content_filename)[1]
+            # Meta sends different types of events, we're only interested in WhatsApp messages
+            if event_data["object"] != "whatsapp_business_account":
+                return {"status": "ignored", "message": f"Ignoring non-WhatsApp event: {event_data['object']}"}
 
-                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
-                    temp_file.write(content_to_process)
-                    temp_path = temp_file.name
+            # Process all entries in the webhook event
+            processed_messages = 0
+            for entry in event_data.get("entry", []):
+                # Each entry can have multiple changes (e.g., multiple messages)
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
 
+                    # Check if this is a message event
+                    if "messages" in value:
+                        # Process each message in the event
+                        for message in value["messages"]:
+                            # Extract basic info
+                            from_number = message.get("from", "")
+
+                            # Process the message
+                            result = await self.process_message({
+                                "from": from_number,
+                                "id": message.get("id", ""),
+                                "timestamp": message.get("timestamp", ""),
+                                **{message.get("type", "text"): message}
+                            })
+
+                            if result.get("status") == "success":
+                                processed_messages += 1
+
+            return {
+                "status": "success",
+                "message": f"Processed {processed_messages} messages",
+                "processed_count": processed_messages
+            }
+        except Exception as e:
+            self.logger.error(f"Error processing webhook event: {str(e)}")
+            return {"status": "error", "message": f"Failed to process webhook event: {str(e)}"}
+
+    async def send_message(self, recipient: str, message: str) -> Dict[str, Any]:
+        """Send a WhatsApp message to a recipient
+
+        Args:
+            recipient: WhatsApp ID (phone number)
+            message: Message text
+
+        Returns:
+            Result of the send operation
+        """
+        from app.services.gateway.whatsapp_settings import whatsapp_settings
+
+        try:
+            # Check if WhatsApp is enabled
+            if not whatsapp_settings.WHATSAPP_ENABLED:
+                return {"status": "error", "message": "WhatsApp integration is not enabled"}
+
+            # Check if we have the necessary credentials
+            if not whatsapp_settings.WHATSAPP_API_TOKEN or not whatsapp_settings.WHATSAPP_PHONE_ID:
+                return {"status": "error", "message": "Missing WhatsApp API credentials"}
+
+            # Prepare the API request
+            url = f"https://graph.facebook.com/v18.0/{whatsapp_settings.WHATSAPP_PHONE_ID}/messages"
+            headers = {
+                "Authorization": f"Bearer {whatsapp_settings.WHATSAPP_API_TOKEN}",
+                "Content-Type": "application/json"
+            }
+
+            # Construct the message data
+            data = {
+                "messaging_product": "whatsapp",
+                "to": recipient,
+                "type": "text",
+                "text": {
+                    "body": message
+                }
+            }
+
+            # Send the message
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, json=data) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        self.logger.error(f"WhatsApp API error: {response.status} - {error_text}")
+                        return {
+                            "status": "error",
+                            "message": f"WhatsApp API error: {response.status}"
+                        }
+
+                    result = await response.json()
+
+                    # Check if the message was sent successfully
+                    if "messages" in result and len(result["messages"]) > 0:
+                        message_id = result["messages"][0].get("id", "unknown")
+                        return {
+                            "status": "success",
+                            "message": "WhatsApp message sent successfully",
+                            "message_id": message_id
+                        }
+                    else:
+                        return {
+                            "status": "error",
+                            "message": "WhatsApp API returned an unexpected response",
+                            "api_response": result
+                        }
+        except aiohttp.ClientError as e:
+            self.logger.error(f"WhatsApp API client error: {str(e)}")
+            return {"status": "error", "message": f"WhatsApp API client error: {str(e)}"}
+        except Exception as e:
+            self.logger.error(f"Error sending WhatsApp message: {str(e)}")
+            return {"status": "error", "message": f"Failed to send WhatsApp message: {str(e)}"}
+    
+    async def process_message(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a WhatsApp message
+        
+        Args:
+            message_data: Raw WhatsApp message data
+            
+        Returns:
+            Processing result
+        """
+        try:
+            # Extract content from the message
+            whatsapp_content = await self._extract_content(message_data)
+            
+            # Skip if content extraction failed
+            if not whatsapp_content:
+                return {
+                    "status": "error",
+                    "message": "Failed to extract content from WhatsApp message"
+                }
+            
+            # Process the extracted content
+            result = await self._process_content_for_aios(whatsapp_content)
+            
+            # Send a notification back to the user if configured
+            if result.get("status") == "success":
+                await self._send_processing_notification(whatsapp_content, result)
+            
+            return result
+        except Exception as e:
+            self.logger.error(f"Error processing WhatsApp message: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Failed to process WhatsApp message: {str(e)}"
+            }
+    
+    async def _extract_content(self, message_data: Dict[str, Any]) -> Optional[WhatsAppContent]:
+        """Extract content from a WhatsApp message
+        
+        Args:
+            message_data: Raw WhatsApp message data
+            
+        Returns:
+            Extracted WhatsApp content
+        """
+        try:
+            # Extract basic message metadata
+            wa_id = message_data.get("from", "unknown")
+            message_id = message_data.get("id", "unknown")
+            timestamp = message_data.get("timestamp", datetime.now().isoformat())
+            
+            # Determine message type and extract content
+            if "text" in message_data:
+                # Text message
+                return WhatsAppContent(
+                    wa_id=wa_id,
+                    message_id=message_id,
+                    message_type="text",
+                    timestamp=timestamp,
+                    text=message_data["text"].get("body", ""),
+                    content_type="text"
+                )
+            elif "image" in message_data:
+                # Image message
+                image_data = message_data["image"]
+                return WhatsAppContent(
+                    wa_id=wa_id,
+                    message_id=message_id,
+                    message_type="image",
+                    timestamp=timestamp,
+                    text=image_data.get("caption", ""),
+                    content_type="image",
+                    content_filename=image_data.get("filename", "image.jpg"),
+                    metadata={
+                        "mime_type": image_data.get("mime_type", "image/jpeg"),
+                        "sha256": image_data.get("sha256", ""),
+                        "id": image_data.get("id", "")
+                    }
+                )
+            elif "document" in message_data:
+                # Document message (PDF, etc.)
+                document_data = message_data["document"]
+                mime_type = document_data.get("mime_type", "")
+                
+                # Determine content type from MIME type
+                content_type = "document"
+                if mime_type.startswith("application/pdf"):
+                    content_type = "pdf"
+                
+                return WhatsAppContent(
+                    wa_id=wa_id,
+                    message_id=message_id,
+                    message_type="document",
+                    timestamp=timestamp,
+                    text=document_data.get("caption", ""),
+                    content_type=content_type,
+                    content_filename=document_data.get("filename", "document"),
+                    metadata={
+                        "mime_type": mime_type,
+                        "sha256": document_data.get("sha256", ""),
+                        "id": document_data.get("id", "")
+                    }
+                )
+            elif "audio" in message_data:
+                # Audio message
+                audio_data = message_data["audio"]
+                return WhatsAppContent(
+                    wa_id=wa_id,
+                    message_id=message_id,
+                    message_type="audio",
+                    timestamp=timestamp,
+                    content_type="audio",
+                    content_filename=audio_data.get("filename", "audio"),
+                    metadata={
+                        "mime_type": audio_data.get("mime_type", "audio/mpeg"),
+                        "sha256": audio_data.get("sha256", ""),
+                        "id": audio_data.get("id", ""),
+                        "voice": audio_data.get("voice", False)
+                    }
+                )
+            else:
+                # Unsupported message type
+                self.logger.warning(f"Unsupported WhatsApp message type: {message_data}")
+                return WhatsAppContent(
+                    wa_id=wa_id,
+                    message_id=message_id,
+                    message_type="unknown",
+                    timestamp=timestamp,
+                    text="Unsupported message type"
+                )
+        except Exception as e:
+            self.logger.error(f"Error extracting content from WhatsApp message: {str(e)}")
+            return None
+    
+    async def _process_content_for_aios(self, whatsapp_content: WhatsAppContent) -> Dict[str, Any]:
+        """Process the extracted content through AIOS
+        
+        Args:
+            whatsapp_content: WhatsApp content to process
+            
+        Returns:
+            Processing result
+        """
+        try:
+            # Prepare content for processing
+            content_to_process = ""
+            
+            if whatsapp_content.message_type == "text":
+                # Text content
+                content_to_process = whatsapp_content.text
+            elif whatsapp_content.content and whatsapp_content.content_type:
+                # Process binary content if available
                 try:
-                    # Read the file and encode as base64
+                    # Write content to a temporary file
+                    suffix = os.path.splitext(whatsapp_content.content_filename)[1] if whatsapp_content.content_filename else ""
+                    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+                        temp_path = temp_file.name
+                        temp_file.write(whatsapp_content.content)
+                    
+                    # Read the file and convert to base64
                     with open(temp_path, "rb") as file:
                         file_content = file.read()
-                        mime_prefix = "application/octet-stream"
-
-                        # Determine mime type
-                        if whatsapp_content.content_type == "pdf":
-                            mime_prefix = "application/pdf"
-                        elif whatsapp_content.content_type == "audio":
-                            mime_prefix = "audio/mpeg"
-                        elif whatsapp_content.content_type == "image":
-                            mime_prefix = "image/jpeg"
-                        elif whatsapp_content.content_type == "video":
-                            mime_prefix = "video/mp4"
-
-                        content_to_process = f"data:{mime_prefix};base64,{base64.b64encode(file_content).decode('utf-8')}"
-
+                    
+                    # Create a data URL
+                    mime_type = whatsapp_content.metadata.get("mime_type", f"{whatsapp_content.content_type}/{suffix.lstrip('.')}")
+                    content_to_process = f"data:{mime_type};base64,{base64.b64encode(file_content).decode('utf-8')}"
+                    
                     # Remove the temporary file
                     os.unlink(temp_path)
                 except Exception as e:
@@ -460,7 +331,7 @@ class WhatsAppProcessor:
                             "status": "error",
                             "message": f"Failed to process media content: {str(e)}"
                         }
-
+            
             # Prepare the message data for the Gateway agent
             message_data = {
                 "from": whatsapp_content.wa_id,
@@ -472,30 +343,48 @@ class WhatsAppProcessor:
                 "filename": whatsapp_content.content_filename,
                 "metadata": whatsapp_content.metadata
             }
-
+            
             # Create the API request for the Gateway agent
             gateway_request = {
                 "source": "whatsapp",
                 "message_data": message_data
             }
-
+            
             # Call the Gateway agent API endpoint
             api_endpoint = "http://localhost:8080/agents/gateway/process"
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(api_endpoint, json=gateway_request) as response:
-                    result = await response.json()
-
-                    # Add some metadata for the reply
-                    if not result.get("whatsapp_metadata"):
-                        result["whatsapp_metadata"] = {}
-
-                    result["whatsapp_metadata"]["wa_id"] = whatsapp_content.wa_id
-                    result["whatsapp_metadata"]["message_id"] = whatsapp_content.message_id
-                    result["whatsapp_metadata"]["processed_at"] = datetime.now().isoformat()
-
-                    return result
-                
+            
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(api_endpoint, json=gateway_request) as response:
+                        if response.status != 200:
+                            self.logger.error(f"Gateway API returned non-200 status: {response.status}")
+                            return {
+                                "status": "error",
+                                "message": f"Gateway API error: {response.status}"
+                            }
+                        result = await response.json()
+                        
+                        # Add some metadata for the reply
+                        if not result.get("whatsapp_metadata"):
+                            result["whatsapp_metadata"] = {}
+                            
+                        result["whatsapp_metadata"]["wa_id"] = whatsapp_content.wa_id
+                        result["whatsapp_metadata"]["message_id"] = whatsapp_content.message_id
+                        result["whatsapp_metadata"]["processed_at"] = datetime.now().isoformat()
+                        
+                        return result
+            except aiohttp.ClientConnectorError as ce:
+                self.logger.error(f"Connection error to Gateway API: {str(ce)}")
+                return {
+                    "status": "error",
+                    "message": "Failed to connect to Gateway API service"
+                }
+            except aiohttp.ClientError as ce:
+                self.logger.error(f"Client error with Gateway API: {str(ce)}")
+                return {
+                    "status": "error",
+                    "message": f"API client error: {str(ce)}"
+                }
         except Exception as e:
             self.logger.error(f"Error processing content for AIOS: {str(e)}")
             return {
@@ -529,89 +418,58 @@ class WhatsAppProcessor:
                     content_id = process_result["storage"].get("content_id", "unknown")
                     processed_content = process_result.get("processed_content", {})
                     
+                    # Construct a success message
                     title = processed_content.get("title", "Untitled")
-                    summary = processed_content.get("summary", "No summary available")
                     
-                    # Format the success message
-                    success_message = f"""✅ Content Processing Completed
-
-*Title:* {title}
-*Type:* {content_type}
-*ID:* {content_id}
-
-*Summary:*
-{summary}
-
-_This is an automated response from the Bluelabel AIOS system._"""
+                    message = f"✅ Successfully processed your {content_type} content!\n\n"
+                    message += f"*{title}*\n\n"
                     
-                    # Send the message
-                    await self.whatsapp.send_message(
-                        whatsapp_content.wa_id,
-                        success_message
-                    )
+                    # Add a summary if available
+                    if processed_content.get("summary"):
+                        summary = processed_content["summary"]
+                        if len(summary) > 150:
+                            summary = summary[:147] + "..."
+                        message += f"Summary: {summary}\n\n"
+                    
+                    # Add tags if available
+                    if processed_content.get("tags"):
+                        tags = ", ".join([f"#{tag}" for tag in processed_content["tags"]])
+                        message += f"Tags: {tags}\n\n"
+                    
+                    # Add info for viewing
+                    message += "Your content has been added to the AIOS knowledge repository."
                 else:
-                    # Processing succeeded but content was not stored
-                    error_reason = process_result.get("storage", {}).get("error", "Unknown error")
-                    partial_success_message = f"""⚠️ Content Processing Partial Success
-
-Your content was processed but could not be stored.
-
-*Reason:* {error_reason}
-
-_This is an automated response from the Bluelabel AIOS system._"""
-                    
-                    # Send the message
-                    await self.whatsapp.send_message(
-                        whatsapp_content.wa_id,
-                        partial_success_message
-                    )
+                    message = "✅ Your message has been processed, but could not be stored in the knowledge repository."
             else:
                 # Error message
-                error_message = process_result.get("message", "Unknown error")
-                
-                error_notification = f"""❌ Content Processing Failed
-
-There was an error processing your content.
-
-*Error:* {error_message}
-
-_This is an automated response from the Bluelabel AIOS system._"""
-                
-                # Send the message
-                await self.whatsapp.send_message(
-                    whatsapp_content.wa_id,
-                    error_notification
-                )
+                error_msg = process_result.get("message", "Unknown error")
+                message = f"❌ Sorry, I couldn't process your message: {error_msg}"
             
-            self.logger.info(f"Sent processing notification to WhatsApp ID: {whatsapp_content.wa_id}")
-            
+            # Send the notification
+            await self.whatsapp.send_message(whatsapp_content.wa_id, message)
         except Exception as e:
-            self.logger.error(f"Error sending WhatsApp notification: {str(e)}")
-    
-    async def send_message(self, recipient: str, message: str) -> Dict[str, Any]:
-        """Send a WhatsApp message
+            self.logger.error(f"Error sending processing notification: {str(e)}")
+            
+    async def simulate_message(self, wa_id: str, text: str) -> Dict[str, Any]:
+        """Simulate receiving a WhatsApp message (for testing)
         
         Args:
-            recipient: The recipient's WhatsApp ID or phone number
-            message: The message text to send
+            wa_id: WhatsApp ID (phone number)
+            text: Message text
             
         Returns:
-            Result of the send operation
+            Processing result
         """
-        if not self.whatsapp:
-            return {"status": "error", "message": "WhatsApp API not configured"}
+        message_data = {
+            "from": wa_id,
+            "id": f"test_{int(datetime.now().timestamp())}",
+            "timestamp": datetime.now().isoformat(),
+            "text": {
+                "body": text
+            }
+        }
         
-        try:
-            # Send the message
-            result = await self.whatsapp.send_message(recipient, message)
-            
-            return {
-                "status": "success",
-                "message_id": result.get("messages", [{}])[0].get("id") if result.get("messages") else None
-            }
-        except Exception as e:
-            self.logger.error(f"Error sending WhatsApp message: {str(e)}")
-            return {
-                "status": "error",
-                "message": f"Failed to send message: {str(e)}"
-            }
+        return await self.process_message(message_data)
+
+# Create a singleton instance
+whatsapp_processor = WhatsAppProcessor()
