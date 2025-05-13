@@ -29,7 +29,7 @@ error() {
     exit 1
 }
 
-API_ENDPOINT=${API_ENDPOINT:-"http://localhost:8080"}
+API_ENDPOINT=${API_ENDPOINT:-"http://localhost:8081"}
 
 section "Bluelabel AIOS Email Gateway Setup"
 echo "This script will help you set up the Email Gateway for Bluelabel AIOS."

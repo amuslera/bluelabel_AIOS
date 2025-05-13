@@ -3,7 +3,7 @@
 # This script demonstrates the complete workflow from content submission to digest creation
 
 # Set the API endpoint
-API_ENDPOINT="http://localhost:8080"
+API_ENDPOINT="http://localhost:8081"
 
 # Colors for output
 GREEN='\033[0;32m'
