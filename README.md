@@ -4,11 +4,22 @@
 
 Bluelabel AIOS (Agentic Intelligence Operating System) is an agent-based AI framework designed to help knowledge workers and creators operate with more clarity, speed, and strategic leverage. The system combines modular AI agents, a structured knowledge repository, and a flexible processing architecture to manage information workflows.
 
-This repository contains the implementation of Bluelabel AIOS's extensible agent framework with two initial agents:
+This repository contains the implementation of Bluelabel AIOS's extensible agent framework with the following agents:
 
 1. **ContentMind**: Processes, organizes, and synthesizes multi-format content from articles, PDFs, podcasts, and more - transforming your "read/watch/listen later" backlog into an organized knowledge resource.
 
 2. **Researcher**: Conducts research on topics and synthesizes information from multiple sources, providing comprehensive answers to research queries.
+
+3. **Gateway**: Handles incoming content from various channels such as email and WhatsApp, automatically processing and routing to appropriate agents.
+
+4. **Digest**: Generates daily or on-demand summaries of content, identifies themes and connections, and delivers insights via email or messaging platforms.
+
+## Recent Updates
+
+- Fixed Gateway agent email processing and routing to Researcher agent for research queries
+- Researcher agent now always provides a model parameter to LLM (fixes OpenAI API errors)
+- Improved debug logging in Gateway and Researcher agents for easier troubleshooting
+- End-to-end test: Gateway email simulation now correctly triggers research workflow and LLM call
 
 ## Architecture
 
@@ -299,6 +310,113 @@ The Researcher agent focuses on conducting research and synthesizing information
 - Organizes results with citations and source attribution
 - Provides structured responses with main findings and insights
 
+### Gateway Agent
+
+The Gateway agent handles content intake from communication channels:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Gateway Agent                               │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Channel Processing                       │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Email       │  │ WhatsApp       │  │ Other Messaging  │  │    │
+│  │  │ Processing  │  │ Processing     │  │ Platforms        │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Content Classification                   │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Type        │  │ Priority       │  │ Agent            │  │    │
+│  │  │ Detection   │  │ Assessment     │  │ Routing          │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    User Management                          │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Preference  │  │ Notification   │  │ Interaction      │  │    │
+│  │  │ Management  │  │ Management     │  │ History          │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Gateway Agent Capabilities
+
+- Monitors email and messaging channels for new content
+- Extracts content from various formats (links, attachments, text)
+- Classifies content and determines appropriate processing agent
+- Routes content to ContentMind, Researcher, or other agents
+- Maintains processing history and user preferences
+- Sends status notifications back to the user
+- Handles authentication and security for communication channels
+- Processes commands and requests in natural language
+
+### Digest Agent
+
+The Digest agent creates summaries and identifies connections across content in the knowledge repository:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Digest Agent                                │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Content Analysis                          │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Theme       │  │ Connection     │  │ Cross-Reference  │  │    │
+│  │  │ Identification │ Discovery      │  │ Analysis         │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Digest Generation                        │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Content     │  │ Insight        │  │ Formatting       │  │    │
+│  │  │ Aggregation │  │ Extraction     │  │ Templates        │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └────────────────────────────┬────────────────────────────────┘    │
+│                               │                                     │
+│                               ▼                                     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Delivery & Scheduling                    │    │
+│  │                                                             │    │
+│  │  ┌─────────────┐  ┌────────────────┐  ┌──────────────────┐  │    │
+│  │  │ Email       │  │ Messaging      │  │ Scheduled        │  │    │
+│  │  │ Delivery    │  │ Delivery       │  │ Distribution     │  │    │
+│  │  └─────────────┘  └────────────────┘  └──────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Digest Agent Capabilities
+
+- Aggregates content from the knowledge repository based on time period or tags
+- Identifies common themes across content items
+- Discovers connections between different pieces of content
+- Extracts insights and identifies patterns
+- Formats digests for different delivery channels
+- Supports scheduled delivery (daily, weekly, monthly)
+- Delivers digests via email or messaging platforms
+- Allows on-demand digest generation with custom parameters
+- Stores digest history for later reference
+
 ### Supported Content Types
 
 - **ContentMind Agent**:
@@ -311,6 +429,18 @@ The Researcher agent focuses on conducting research and synthesizing information
 - **Researcher Agent**:
   - Research queries (text-based questions)
   - Text content for analysis and synthesis
+
+- **Gateway Agent**:
+  - Email messages with attachments or links
+  - WhatsApp messages and media
+  - Command processing via messaging platforms
+  - Natural language content submission
+
+- **Digest Agent**:
+  - Content from knowledge repository
+  - Time-based content selection (daily, weekly, monthly)
+  - Tag-based content filtering
+  - Formatted digests for email and messaging platforms
 
 ### Use Cases
 
@@ -327,6 +457,20 @@ The Researcher agent focuses on conducting research and synthesizing information
   - Exploring new topics and identifying patterns across sources
   - Supporting decision-making with comprehensive analysis
   - Building knowledge bases on specific domains
+
+- **Gateway Agent**:
+  - Submitting content via email while on the go
+  - Sharing articles via WhatsApp for processing
+  - Issuing commands through messaging platforms
+  - Automated content intake from various channels
+  - Centralized content submission interface
+
+- **Digest Agent**:
+  - Receiving daily summaries of processed content
+  - Discovering thematic connections across content
+  - Getting insights from accumulated knowledge
+  - Scheduling regular content summary delivery
+  - Creating custom digests for specific topics or time periods
 
 ## Deployment Architecture
 
@@ -490,15 +634,160 @@ uvicorn app.main:app --reload
 
 # In a separate terminal, start the Streamlit UI
 streamlit run app/ui/streamlit_app.py
-
-# Configure and start the email gateway (optional)
-# Set up your .env file with email settings first
-curl -X POST http://localhost:8080/gateway/email/start
-
-# Configure and start the WhatsApp gateway (optional)
-# Set up your .env file with WhatsApp API credentials first
-curl -X POST http://localhost:8080/gateway/whatsapp/config -H "Content-Type: application/json" -d '{"phone_id": "your_phone_id", "business_account_id": "your_business_account_id", "api_token": "your_api_token", "verify_token": "your_verify_token", "enabled": true}'
 ```
+
+### Setting Up Communication Gateways
+
+#### Email Gateway Setup
+
+##### Option 1: Password-Based Authentication (Basic Setup)
+
+The easiest way to set up the email gateway with password-based authentication is using the provided setup script:
+
+```bash
+# Run the interactive setup script
+./scripts/setup_email_gateway.sh
+```
+
+This will guide you through setting up an email account for receiving content.
+
+Alternatively, you can manually configure it:
+
+```bash
+# Configure the email gateway with your settings
+curl -X POST http://localhost:8080/gateway/email/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_address": "your-email@gmail.com",
+    "server": "imap.gmail.com",
+    "password": "your-app-password",
+    "port": 993,
+    "use_ssl": true,
+    "check_interval": 300,
+    "outgoing_server": "smtp.gmail.com",
+    "outgoing_port": 587,
+    "outgoing_use_tls": true
+  }'
+
+# Start the email gateway
+curl -X POST http://localhost:8080/gateway/email/start
+```
+
+##### Option 2: Google OAuth Authentication (Recommended for Google Workspace)
+
+For Gmail or Google Workspace accounts, OAuth authentication is recommended:
+
+1. Set up Google OAuth credentials in the Google Cloud Console
+2. Configure Bluelabel AIOS with your credentials:
+
+```bash
+# Configure Google OAuth
+curl -X POST "http://localhost:8080/gateway/google/config" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "YOUR_GOOGLE_CLIENT_ID",
+    "client_secret": "YOUR_GOOGLE_CLIENT_SECRET"
+  }'
+
+# Get authentication URL
+curl "http://localhost:8080/gateway/google/auth"
+```
+
+3. Open the returned `auth_url` in your browser and complete the authentication
+4. Configure and start the email gateway with OAuth:
+
+```bash
+# Configure and start the email gateway with OAuth
+curl -X POST "http://localhost:8080/gateway/email/google"
+```
+
+See `docs/email_gateway_setup.md` and `docs/google_oauth_setup.md` for detailed instructions.
+
+#### WhatsApp Gateway Setup
+
+```bash
+# Configure the WhatsApp gateway
+curl -X POST http://localhost:8080/gateway/whatsapp/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone_id": "your_phone_id",
+    "business_account_id": "your_business_account_id",
+    "api_token": "your_api_token",
+    "verify_token": "your_verify_token",
+    "enabled": true
+  }'
+```
+
+### Configuring Digests
+
+#### Scheduled Digests
+
+```bash
+# Schedule a daily digest delivered via email
+curl -X POST http://localhost:8080/scheduler/digests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schedule_type": "daily",
+    "time": "08:00",
+    "recipient": "your-email@example.com",
+    "digest_type": "daily",
+    "delivery_method": "email",
+    "content_types": ["url", "pdf", "text"],
+    "tags": []
+  }'
+```
+
+#### On-Demand Digests
+
+```bash
+# Generate a digest immediately for the last 7 days
+curl -X POST http://localhost:8080/digests/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "digest_type": "weekly",
+    "date_range": "2025-05-05,2025-05-12",
+    "delivery_method": "email",
+    "recipient": "your-email@example.com"
+  }'
+```
+
+You can also manage digests through the Streamlit UI on the "Digest Management" page.
+```
+
+### Using the Gateway Agent
+
+The Gateway agent allows you to process content by sending it to specific email addresses or WhatsApp numbers:
+
+1. **Email Gateway**:
+   - Send links, text, or attachments to your configured email address
+   - Subject lines can contain commands or tags: `[TAG: tech, ai] Article for processing`
+   - PDF and audio files can be sent as attachments
+   - The Gateway will automatically process content and route it to the appropriate agent
+
+2. **WhatsApp Gateway**:
+   - Send messages to your configured WhatsApp number
+   - Include links, text, or media in your messages
+   - Use natural language commands: "Research quantum computing"
+   - Request digests directly: "Send me a digest of AI content from this week"
+
+### Using the Digest Agent
+
+The Digest Agent can be used through the UI or API:
+
+1. **Scheduled Digests**:
+   - Configure daily, weekly, or monthly digests via the Digest Management page
+   - Customize content types and tags to include
+   - Select delivery method (email or WhatsApp)
+
+2. **On-Demand Digests**:
+   - Create custom digests for specific date ranges or topics
+   - Filter by content type, tags, or keywords
+   - View digests directly in the UI or have them delivered
+
+3. **Digest Analysis**:
+   - Explore themes and connections between content items
+   - Discover insights that span multiple content sources
+   - Use cross-references to understand relationships between topics
 
 ## Contributing
 

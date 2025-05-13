@@ -3,6 +3,10 @@
 This document tracks the evolution of the Bluelabel AIOS project, including version history, current status, known issues, and planned next steps.
 
 ## [Unreleased]
+- Fixed Gateway agent email processing and routing to Researcher agent for research queries
+- Ensured Researcher agent always provides a model parameter to LLM (fixes OpenAI API errors)
+- Improved debug logging in Gateway and Researcher agents for easier troubleshooting
+- End-to-end test: Gateway email simulation now correctly triggers research workflow and LLM call
 - Implemented agent extensibility framework for adding new agent types
 - Created researcher agent with search and synthesis capabilities
 - Added YAML-based configuration system for agents

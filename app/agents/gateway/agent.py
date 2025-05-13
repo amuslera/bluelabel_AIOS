@@ -27,10 +27,14 @@ class EmailProcessingTool(AgentTool):
     async def execute(self, email_data: Dict[str, Any], **kwargs) -> Dict[str, Any]:
         """Process content from an email and route to appropriate agent"""
         try:
+            logger.debug(f"EmailProcessingTool.execute: Starting with email_data = {json.dumps(email_data, default=str)}")
             logger.info(f"Processing email with subject: {email_data.get('subject', 'Unknown')}")
             
             # Extract content from email
+            logger.debug("EmailProcessingTool.execute: Calling _extract_content")
             content = await self._extract_content(email_data)
+            logger.debug(f"EmailProcessingTool.execute: _extract_content returned: {content}")
+            
             if not content:
                 logger.warning("No processable content found in email")
                 return {
@@ -57,7 +61,14 @@ class EmailProcessingTool(AgentTool):
                     "original_email": email_data.get("message_id", "Unknown")
                 }
             }
-            
+
+            # For research requests, ensure 'query' is at the top level
+            if content_type == "query" and target_agent_id == "researcher":
+                agent_request["query"] = content
+
+            # Print the agent_request being sent to the target agent
+            print(f"[PRINT] Gateway agent_request to {target_agent_id}: {json.dumps(agent_request, default=str)}")
+
             # Get agent registry
             agent_registry = get_agent_registry()
             
@@ -95,52 +106,66 @@ class EmailProcessingTool(AgentTool):
     
     async def _extract_content(self, email_data: Dict[str, Any]) -> Optional[str]:
         """Extract content from email data"""
+        logger.debug(f"_extract_content: email_data = {json.dumps(email_data, default=str)}")
+        
         # First, check for attachments
         attachments = email_data.get("attachments", [])
         if attachments:
             for attachment in attachments:
                 # Check if it's a PDF
                 if attachment.get("mime_type") == "application/pdf":
-                    # Return as data URL
                     b64_content = attachment.get("content", "")
+                    logger.debug("_extract_content: found PDF attachment")
                     return f"data:application/pdf;base64,{b64_content}"
-                
-                # Check if it's an audio file
                 if attachment.get("mime_type", "").startswith("audio/"):
                     mime_type = attachment.get("mime_type", "audio/mpeg")
                     b64_content = attachment.get("content", "")
+                    logger.debug("_extract_content: found audio attachment")
                     return f"data:{mime_type};base64,{b64_content}"
         
-        # Check for links in plain text or HTML content
+        # Check for research-related content in subject
+        subject = email_data.get("subject", "").lower()
+        is_research = any(term in subject for term in ["research", "query", "question", "investigate"])
+        
+        # Extract content from text and HTML
         text_content = email_data.get("plain_text", "")
         html_content = email_data.get("html_content", "")
         
-        # Extract URL from text content
+        # Look for URLs
         import re
         url_pattern = r'https?://[^\s]+'
         
-        # Try plain text first
         if text_content:
             urls = re.findall(url_pattern, text_content)
             if urls:
-                # Return the first URL (we could be more sophisticated here)
-                return urls[0]
+                if is_research:
+                    # For research requests, return the full text content
+                    logger.debug("_extract_content: research request with URL, returning full text")
+                    return text_content
+                else:
+                    # For non-research requests, return just the URL
+                    logger.debug("_extract_content: returning first URL from text_content")
+                    return urls[0]
+            elif is_research:
+                logger.debug("_extract_content: research request, returning text_content")
+                return text_content
         
-        # Try HTML content
         if html_content:
             urls = re.findall(url_pattern, html_content)
             if urls:
-                return urls[0]
+                if is_research:
+                    # For research requests, return the full text content
+                    logger.debug("_extract_content: research request with URL, returning full text")
+                    return text_content
+                else:
+                    # For non-research requests, return just the URL
+                    logger.debug("_extract_content: returning first URL from html_content")
+                    return urls[0]
+            elif is_research:
+                logger.debug("_extract_content: research request, returning html_content")
+                return html_content
         
-        # If we found neither attachments nor URLs, return the text content
-        if text_content:
-            return text_content
-        
-        # If all else fails, use HTML content
-        if html_content:
-            return html_content
-        
-        # No processable content found
+        logger.debug("_extract_content: no processable content found")
         return None
     
     def _determine_content_type(self, content: str, email_data: Dict[str, Any]) -> str:
@@ -169,15 +194,18 @@ class EmailProcessingTool(AgentTool):
         """Determine which agent should process this content"""
         # Check for explicit agent routing in the subject
         subject = email_data.get("subject", "").lower()
-        
+
         # Look for explicit agent mentions
         if "researcher" in subject or "research" in subject:
             return "researcher"
-        
+
+        if "digest" in subject or "summary" in subject:
+            return "digest"
+
         # Route based on content type
         if content_type == "query":
             return "researcher"
-        
+
         # Default to ContentMind for most content types
         return "contentmind"
 
@@ -315,15 +343,18 @@ class WhatsAppProcessingTool(AgentTool):
         """Determine which agent should process this content"""
         # Check for explicit agent routing in the message
         text = message_data.get("text", "").lower()
-        
+
         # Look for explicit agent mentions
         if "researcher" in text or text.startswith("research:"):
             return "researcher"
-        
+
+        if "digest" in text or "summary" in text or text.startswith("digest:"):
+            return "digest"
+
         # Route based on content type
         if content_type == "query":
             return "researcher"
-        
+
         # Default to ContentMind for most content types
         return "contentmind"
 
@@ -351,16 +382,21 @@ class GatewayAgent(BluelabelAgent):
     
     async def process(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process an incoming request and route to appropriate agent"""
+        print(f"[DEBUG] GatewayAgent.process: Starting with request = {json.dumps(request, default=str)}", flush=True)
         # Determine the source of the content
         source = request.get("source", "unknown")
+        print(f"[DEBUG] GatewayAgent.process: source = {source}", flush=True)
         
         if source == "email":
             # Process email content
             email_tool = next((t for t in self.tools if t.name == "email_processor"), None)
+            print(f"[DEBUG] GatewayAgent.process: Found email_tool = {email_tool}", flush=True)
             if not email_tool:
                 return {"status": "error", "message": "Email processing tool not available"}
             
-            return await email_tool.execute(request.get("email_data", {}))
+            result = await email_tool.execute(request.get("email_data", {}))
+            print(f"[DEBUG] GatewayAgent.process: email_tool.execute returned = {json.dumps(result, default=str)}", flush=True)
+            return result
         
         elif source == "whatsapp":
             # Process WhatsApp content
@@ -379,11 +415,18 @@ class GatewayAgent(BluelabelAgent):
     
     async def process_email(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
         """Convenience method for processing email content"""
-        request = {
-            "source": "email",
-            "email_data": email_data
-        }
-        return await self.process(request)
+        logger.debug(f"GatewayAgent.process_email: Starting with email_data = {json.dumps(email_data, default=str)}")
+        
+        # Get the email processing tool
+        email_tool = next((t for t in self.tools if t.name == "email_processor"), None)
+        if not email_tool:
+            logger.error("Email processing tool not available")
+            return {"status": "error", "message": "Email processing tool not available"}
+        
+        logger.debug("GatewayAgent.process_email: Found email_tool, executing...")
+        result = await email_tool.execute(email_data)
+        logger.debug(f"GatewayAgent.process_email: email_tool.execute returned = {json.dumps(result, default=str)}")
+        return result
     
     async def process_whatsapp(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """Convenience method for processing WhatsApp content"""

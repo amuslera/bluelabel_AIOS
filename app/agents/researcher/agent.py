@@ -135,8 +135,14 @@ class ResearcherAgent(BluelabelAgent):
         if not search_tool:
             return {"status": "error", "message": "Search tool not available"}
         
+        # Always include a model parameter
+        search_requirements = {
+            "model": "gpt-3.5-turbo",
+            "provider": research_provider
+        }
         search_result = await search_tool.execute(
             query=query,
+            model="gpt-3.5-turbo",
             provider=research_provider
         )
         
@@ -170,9 +176,15 @@ class ResearcherAgent(BluelabelAgent):
         if not synthesis_tool:
             return {"status": "error", "message": "Synthesis tool not available"}
         
+        # Always include a model parameter
+        synthesis_requirements = {
+            "model": "gpt-3.5-turbo",
+            "provider": synthesis_provider
+        }
         synthesis_result = await synthesis_tool.execute(
             query=query,
             search_results=search_items,
+            model="gpt-3.5-turbo",
             provider=synthesis_provider
         )
         
