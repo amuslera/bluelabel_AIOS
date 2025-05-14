@@ -26,16 +26,17 @@
         <div id="general" class="settings-section active">
             <h2 class="settings-section-title">General Settings</h2>
             
-            <form class="settings-form" id="general-settings-form">
+            <form class="settings-form" id="general-settings-form" method="POST">
                 <div class="form-group">
                     <label for="system-name">System Name</label>
-                    <input type="text" id="system-name" name="system_name" value="BlueAbel AIOS">
+                    <input type="text" id="system-name" name="system_name" value="{{ settings.get('general', {}).get('system_name', 'BlueAbel AIOS') }}">
                 </div>
+                <input type="hidden" name="section" value="general">
                 
                 <div class="form-group">
                     <label for="default-language">Default Language</label>
                     <select id="default-language" name="default_language">
-                        <option value="en" selected>English</option>
+                        <option value="en" {% if settings.get('general', {}).get('default_language', 'en') == 'en' %}selected{% endif %}>English</option>
                         <option value="es">Spanish</option>
                         <option value="fr">French</option>
                         <option value="de">German</option>
@@ -45,7 +46,7 @@
                 <div class="form-group">
                     <label for="timezone">Timezone</label>
                     <select id="timezone" name="timezone">
-                        <option value="UTC" selected>UTC</option>
+                        <option value="UTC" {% if settings.get('general', {}).get('timezone', 'UTC') == 'UTC' %}selected{% endif %}>UTC</option>
                         <option value="America/New_York">Eastern Time (ET)</option>
                         <option value="America/Chicago">Central Time (CT)</option>
                         <option value="America/Denver">Mountain Time (MT)</option>
@@ -80,7 +81,8 @@
         <div id="api" class="settings-section">
             <h2 class="settings-section-title">API Configuration</h2>
             
-            <form class="settings-form" id="api-settings-form">
+            <form class="settings-form" id="api-settings-form" method="POST">
+                <input type="hidden" name="section" value="api">
                 <div class="form-group">
                     <label for="api-host">API Host</label>
                     <input type="text" id="api-host" name="api_host" value="127.0.0.1">
@@ -113,6 +115,7 @@
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                     <button type="button" class="btn btn-secondary" id="test-api-btn">Test Connection</button>
+                    <a href="{{ url_for('api_diagnostics') }}" class="btn" style="background-color: #f39c12; color: white;">API Diagnostics</a>
                 </div>
             </form>
         </div>
@@ -121,7 +124,8 @@
         <div id="processors" class="settings-section">
             <h2 class="settings-section-title">Content Processors</h2>
             
-            <form class="settings-form" id="processors-settings-form">
+            <form class="settings-form" id="processors-settings-form" method="POST">
+                <input type="hidden" name="section" value="processors">
                 <div class="form-group">
                     <h3>Enabled Processors</h3>
                     
@@ -190,7 +194,8 @@
         <div id="models" class="settings-section">
             <h2 class="settings-section-title">Model Settings</h2>
             
-            <form class="settings-form" id="models-settings-form">
+            <form class="settings-form" id="models-settings-form" method="POST">
+                <input type="hidden" name="section" value="models">
                 <div class="form-group">
                     <label for="default-model">Default Model</label>
                     <select id="default-model" name="default_model">
@@ -283,7 +288,8 @@
                 <p>Configure behavior and capabilities of various agents in the system.</p>
             </div>
             
-            <form class="settings-form" id="agents-settings-form">
+            <form class="settings-form" id="agents-settings-form" method="POST">
+                <input type="hidden" name="section" value="agents">
                 <div class="form-group">
                     <h3>Gateway Agent</h3>
                     
@@ -361,7 +367,8 @@
         <div id="storage" class="settings-section">
             <h2 class="settings-section-title">Storage Settings</h2>
             
-            <form class="settings-form" id="storage-settings-form">
+            <form class="settings-form" id="storage-settings-form" method="POST">
+                <input type="hidden" name="section" value="storage">
                 <div class="form-group">
                     <h3>Database Configuration</h3>
                     
@@ -698,14 +705,9 @@
         
         forms.forEach(form => {
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // In a real implementation, this would save the settings to the API
-                const formData = new FormData(form);
-                const formId = form.id;
-                
-                // For demo, just show an alert
-                alert(`Settings in ${formId} saved successfully.`);
+                // Let the form submit normally with POST method
+                // The server will handle the request
+                return true;
             });
         });
         

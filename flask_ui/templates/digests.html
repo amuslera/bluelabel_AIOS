@@ -12,74 +12,45 @@
 </div>
 
 <div class="digest-list">
-    <!-- Demo Digests (would be replaced with real data from the API) -->
+    {% for digest in digests %}
     <div class="digest-card">
         <div class="digest-card-header">
-            <h3 class="digest-title">Weekly AI Research Digest</h3>
-            <span class="digest-date">May 15, 2023</span>
+            <h3 class="digest-title">{{ digest.title }}</h3>
+            <span class="digest-date">{{ format_date(digest.created_at) }}</span>
         </div>
         <div class="digest-card-body">
-            <p class="digest-description">Summary of key AI research papers and developments from the past week.</p>
+            <p class="digest-description">{{ digest.description }}</p>
             <div class="digest-meta">
                 <div class="digest-info">
                     <span class="info-label">Documents:</span>
-                    <span class="info-value">8</span>
+                    <span class="info-value">{{ digest.document_count }}</span>
                 </div>
                 <div class="digest-info">
                     <span class="info-label">Created by:</span>
-                    <span class="info-value">Digest Agent</span>
+                    <span class="info-value">{{ digest.created_by }}</span>
                 </div>
                 <div class="digest-info">
                     <span class="info-label">Model:</span>
-                    <span class="info-value">GPT-4</span>
+                    <span class="info-value">{{ digest.model }}</span>
                 </div>
             </div>
             <div class="digest-tags">
-                <span class="tag">AI</span>
-                <span class="tag">Research</span>
-                <span class="tag">Weekly</span>
+                {% for tag in digest.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
             </div>
         </div>
         <div class="digest-card-actions">
-            <a href="#" class="btn">View Digest</a>
+            <a href="{{ url_for('content_detail', content_id=digest.id) }}" class="btn">View Digest</a>
             <button class="btn btn-icon" title="Export"><i class="icon">📥</i></button>
-            <button class="btn btn-icon" title="Delete"><i class="icon">🗑️</i></button>
+            <button class="btn btn-icon" title="Delete" data-id="{{ digest.id }}"><i class="icon">🗑️</i></button>
         </div>
     </div>
-    
-    <div class="digest-card">
-        <div class="digest-card-header">
-            <h3 class="digest-title">ML Framework Comparison</h3>
-            <span class="digest-date">May 10, 2023</span>
-        </div>
-        <div class="digest-card-body">
-            <p class="digest-description">A detailed comparison of popular machine learning frameworks and their performance.</p>
-            <div class="digest-meta">
-                <div class="digest-info">
-                    <span class="info-label">Documents:</span>
-                    <span class="info-value">5</span>
-                </div>
-                <div class="digest-info">
-                    <span class="info-label">Created by:</span>
-                    <span class="info-value">Digest Agent</span>
-                </div>
-                <div class="digest-info">
-                    <span class="info-label">Model:</span>
-                    <span class="info-value">Claude 3</span>
-                </div>
-            </div>
-            <div class="digest-tags">
-                <span class="tag">ML</span>
-                <span class="tag">Frameworks</span>
-                <span class="tag">Technical</span>
-            </div>
-        </div>
-        <div class="digest-card-actions">
-            <a href="#" class="btn">View Digest</a>
-            <button class="btn btn-icon" title="Export"><i class="icon">📥</i></button>
-            <button class="btn btn-icon" title="Delete"><i class="icon">🗑️</i></button>
-        </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No digests found. Create a new digest to get started.</p>
     </div>
+    {% endfor %}
 </div>
 
 <!-- Create Digest Modal -->
@@ -90,7 +61,7 @@
             <span class="close">&times;</span>
         </div>
         <div class="modal-body">
-            <form id="create-digest-form">
+            <form id="create-digest-form" method="POST" action="{{ url_for('digests') }}">
                 <div class="form-group">
                     <label for="digest-title">Digest Title</label>
                     <input type="text" id="digest-title" name="title" required>
@@ -110,15 +81,16 @@
                     
                     <div id="manual-select" class="tab-content active">
                         <div class="content-selection-list">
+                            {% for item in content_for_digest %}
                             <div class="content-selection-item">
-                                <input type="checkbox" id="content-1" name="content[]" value="1">
-                                <label for="content-1">Introduction to Artificial Intelligence</label>
+                                <input type="checkbox" id="content-{{ item.id }}" name="content[]" value="{{ item.id }}">
+                                <label for="content-{{ item.id }}">{{ item.title }}</label>
                             </div>
-                            <div class="content-selection-item">
-                                <input type="checkbox" id="content-2" name="content[]" value="2">
-                                <label for="content-2">Machine Learning Fundamentals</label>
+                            {% else %}
+                            <div class="content-selection-empty">
+                                <p>No content items available for digestion.</p>
                             </div>
-                            <!-- More content items would be populated from the API -->
+                            {% endfor %}
                         </div>
                     </div>
                     
@@ -151,10 +123,9 @@
                 <div class="form-group">
                     <label for="digest-model">Model</label>
                     <select id="digest-model" name="model">
-                        <option value="Auto">Auto-select</option>
-                        <option value="GPT-4">GPT-4</option>
-                        <option value="Claude 3">Claude 3</option>
-                        <option value="Llama 3">Llama 3</option>
+                        {% for model in available_models %}
+                        <option value="{{ model }}">{{ model }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 
@@ -409,13 +380,13 @@
         const form = document.getElementById('create-digest-form');
         
         form.addEventListener('submit', function(e) {
-            e.preventDefault();
+            // Let the form submit naturally to the server
+            // This will post to the /digests endpoint with the form data
             
-            // In a real implementation, this would submit the form to the API
-            alert('Digest creation would be sent to the API');
-            
-            // Close the modal
-            modal.style.display = 'none';
+            // Display spinner or loading indicator
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = 'Creating...';
+            submitBtn.disabled = true;
         });
     });
 </script>

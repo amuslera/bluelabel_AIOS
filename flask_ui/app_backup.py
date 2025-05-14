@@ -44,10 +44,6 @@ app = Flask(__name__,
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(16))  # For session management
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # Auto-reload templates during development
 
-# API request timeout configuration
-DEFAULT_TIMEOUT = 10  # seconds
-LONG_TIMEOUT = 30     # seconds (for file uploads and complex operations)
-
 # Navigation configuration
 NAV_ITEMS = {
     "Main": [
@@ -75,10 +71,10 @@ def check_api_status():
     try:
         response = requests.get(f"{API_BASE_URL}/status", timeout=2)
         return response.status_code == 200
-    except Exception as e:
+    except:
         return False
 
-def check_endpoint_status(endpoint, method="GET", data=None, timeout=DEFAULT_TIMEOUT):
+def check_endpoint_status(endpoint, method="GET", data=None, timeout=5):
     """Check if a specific API endpoint is working"""
     try:
         if method == "GET":
@@ -86,6 +82,7 @@ def check_endpoint_status(endpoint, method="GET", data=None, timeout=DEFAULT_TIM
         elif method == "POST":
             response = requests.post(f"{API_BASE_URL}/{endpoint}", json=data, timeout=timeout)
         
+        print(f"[DEBUG] Endpoint {endpoint} status: {response.status_code}")
         if response.status_code == 200:
             return {"status": "ok", "details": response.json()}
         else:
@@ -115,22 +112,26 @@ def get_content_items(limit=10, content_type=None, sort_by="date_desc", page=1, 
         if query:
             params["query"] = query
         
+        # Log the API call for debugging
+        print(f"[DEBUG] Fetching content items: {API_BASE_URL}/knowledge/list with params {params}")
+        
         # Call the API to get content items
         response = requests.get(
             f"{API_BASE_URL}/knowledge/list", 
             params=params,
-            timeout=DEFAULT_TIMEOUT  # Prevent UI hanging
+            timeout=5  # 5 second timeout to prevent UI hanging
         )
         
         if response.status_code == 200:
             result = response.json()
-            
             if result.get("status") == "success":
                 items = result.get("results", [])
                 
                 # Additional metadata for pagination if available
                 total_count = result.get("total", len(items))
                 total_pages = result.get("pages", 1)
+                
+                print(f"[DEBUG] Fetched {len(items)} items (total: {total_count} in {total_pages} pages)")
                 
                 return {
                     "items": items, 
@@ -139,6 +140,8 @@ def get_content_items(limit=10, content_type=None, sort_by="date_desc", page=1, 
                     "current_page": page
                 }
             else:
+                print(f"[DEBUG] API returned non-success status: {result}")
+                # Return empty result if API call fails
                 return {
                     "items": [],
                     "total": 0,
@@ -147,6 +150,8 @@ def get_content_items(limit=10, content_type=None, sort_by="date_desc", page=1, 
                     "error": f"API returned error: {result.get('message', 'Unknown error')}"
                 }
         else:
+            print(f"[DEBUG] API returned status code: {response.status_code}")
+            # Return empty result if API returns error status
             return {
                 "items": [],
                 "total": 0,
@@ -156,6 +161,8 @@ def get_content_items(limit=10, content_type=None, sort_by="date_desc", page=1, 
             }
     
     except Exception as e:
+        print(f"[ERROR] Error fetching content items: {str(e)}")
+        # Return empty list if API call fails
         return {
             "items": [],
             "total": 0,
@@ -166,27 +173,21 @@ def get_content_items(limit=10, content_type=None, sort_by="date_desc", page=1, 
 
 def get_content_item(content_id):
     """Get a specific content item from the API"""
+    print(f"[DEBUG] get_content_item called with ID: {content_id}")
+    
     try:
         # Call the API to get content item details
         response = requests.get(
             f"{API_BASE_URL}/knowledge/{content_id}",
-            timeout=DEFAULT_TIMEOUT
+            timeout=5  # 5 second timeout
         )
         
         if response.status_code == 200:
             result = response.json()
-            
-            # The API might return the data directly or wrapped in a result object
-            if isinstance(result, dict):
-                if result.get("status") == "success":
-                    item = result.get("data", {})
-                elif "content" in result:
-                    # Direct response format
-                    item = result
-                else:
-                    # Assume the result is the item itself
-                    item = result
-                    
+            if result.get("status") == "success":
+                item = result.get("data", {})
+                print(f"[DEBUG] Successfully fetched content item: {item.get('title', 'Unknown')}")
+                
                 # Ensure required fields exist
                 required_fields = {
                     "id": content_id,
@@ -201,9 +202,9 @@ def get_content_item(content_id):
                     "entities": []
                 }
                 
-                # Only add defaults for missing fields, don't overwrite existing values
+                # Update with actual values from response
                 for key, default_value in required_fields.items():
-                    if key not in item or item[key] is None or item[key] == "":
+                    if key not in item or item[key] is None:
                         item[key] = default_value
                 
                 # Ensure type/content_type consistency
@@ -214,36 +215,261 @@ def get_content_item(content_id):
                 
                 return item
             else:
+                print(f"[DEBUG] API returned non-success status: {result}")
                 return None
-        elif response.status_code == 404:
-            return None
         else:
+            print(f"[DEBUG] API returned status code: {response.status_code}")
             return None
     
     except Exception as e:
+        print(f"[ERROR] Error fetching content item: {str(e)}")
         return None
 
 def get_components(component_type=None):
     """Get MCP components from the API"""
+    try:
+            "type": "url",
+            "source": "https://example.com/ai-intro",
+            "created_at": datetime.now().replace(day=datetime.now().day-2).isoformat(),
+            "content": "Artificial Intelligence (AI) is transforming our world in remarkable ways. From autonomous vehicles to virtual assistants, AI technologies are becoming increasingly integrated into our daily lives.\n\nAt its core, AI involves developing computer systems that can perform tasks that would normally require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding.\n\nKey areas of AI include:\n\n- Machine Learning: Algorithms that improve automatically through experience\n- Deep Learning: Neural networks with many layers that can learn complex patterns\n- Natural Language Processing: Enabling computers to understand and generate human language\n- Computer Vision: Allowing machines to interpret and understand visual information\n- Robotics: Creating machines that can interact with the physical world\n\nAs AI continues to advance, it presents both exciting opportunities and important ethical considerations that society must address.",
+            "tags": ["AI", "Technology", "Introduction"],
+            "entities": [
+                {"name": "Machine Learning", "type": "Concept"},
+                {"name": "Deep Learning", "type": "Concept"},
+                {"name": "Neural Networks", "type": "Technology"},
+                {"name": "NLP", "type": "Technology"},
+                {"name": "Computer Vision", "type": "Technology"}
+            ]
+        },
+        "2": {
+            "id": "2",
+            "title": "Machine Learning Fundamentals",
+            "summary": "Core concepts and techniques in machine learning.",
+            "type": "pdf",
+            "source": "Machine_Learning_Fundamentals.pdf",
+            "created_at": datetime.now().replace(day=datetime.now().day-5).isoformat(),
+            "content": "Machine Learning (ML) is a subset of artificial intelligence that focuses on developing systems that can learn from and make decisions based on data. Instead of explicitly programming rules, ML algorithms identify patterns in data and improve their performance with experience.\n\nFundamental ML concepts include:\n\n1. Supervised Learning: Training with labeled data to predict outcomes\n2. Unsupervised Learning: Finding patterns in unlabeled data\n3. Reinforcement Learning: Learning through interaction with an environment\n4. Feature Engineering: Selecting and transforming variables for modeling\n5. Model Evaluation: Assessing performance using metrics like accuracy and precision\n\nPopular ML algorithms include decision trees, random forests, support vector machines, and neural networks. Each has strengths and weaknesses for different applications.\n\nThe ML workflow typically involves data collection, preprocessing, model training, evaluation, and deployment. As models move into production, considerations around monitoring, maintenance, and ethics become increasingly important.",
+            "tags": ["ML", "Data Science", "AI"],
+            "entities": [
+                {"name": "Supervised Learning", "type": "Concept"},
+                {"name": "Unsupervised Learning", "type": "Concept"},
+                {"name": "Reinforcement Learning", "type": "Concept"},
+                {"name": "Decision Trees", "type": "Algorithm"},
+                {"name": "Neural Networks", "type": "Algorithm"}
+            ]
+        },
+        "3": {
+            "id": "3",
+            "title": "Deep Learning Applications",
+            "summary": "Practical applications of deep learning in various industries.",
+            "type": "url",
+            "source": "https://example.com/deep-learning-apps",
+            "created_at": datetime.now().replace(day=datetime.now().day-7).isoformat(),
+            "content": "Deep learning has revolutionized numerous industries with its remarkable ability to process and learn from vast amounts of data. Here are some key applications across different sectors:\n\nHealthcare:\n- Medical image analysis for detecting diseases like cancer and diabetic retinopathy\n- Drug discovery and development through molecular structure analysis\n- Patient outcome prediction based on electronic health records\n\nFinance:\n- Fraud detection systems that identify unusual transaction patterns\n- Algorithmic trading strategies optimized for market conditions\n- Credit scoring models with improved accuracy\n\nTransportation:\n- Autonomous vehicles that perceive and navigate complex environments\n- Traffic prediction and optimization systems\n- Logistics and route optimization\n\nRetail:\n- Personalized recommendation systems\n- Inventory management and demand forecasting\n- Visual search capabilities\n\nManufacturing:\n- Quality control through computer vision\n- Predictive maintenance to prevent equipment failures\n- Process optimization for improved efficiency\n\nAs deep learning technologies continue to advance, we can expect to see even more innovative applications emerge across industries.",
+            "tags": ["Deep Learning", "AI", "Applications"],
+            "entities": [
+                {"name": "Healthcare", "type": "Industry"},
+                {"name": "Finance", "type": "Industry"},
+                {"name": "Autonomous Vehicles", "type": "Application"},
+                {"name": "Computer Vision", "type": "Technology"},
+                {"name": "Predictive Maintenance", "type": "Application"}
+            ]
+        },
+        "4": {
+            "id": "4",
+            "title": "Natural Language Processing",
+            "summary": "Introduction to NLP techniques and models.",
+            "type": "text",
+            "source": "Manual Entry",
+            "created_at": datetime.now().replace(day=datetime.now().day-10).isoformat(),
+            "content": "Natural Language Processing (NLP) combines linguistics, computer science, and artificial intelligence to enable computers to understand, interpret, and generate human language. This field has seen remarkable advances in recent years, particularly with the development of large language models.\n\nCore NLP Tasks:\n\n- Text Classification: Categorizing text into predefined groups (e.g., spam detection, sentiment analysis)\n- Named Entity Recognition: Identifying entities like people, organizations, and locations in text\n- Part-of-Speech Tagging: Marking words with their grammatical categories\n- Dependency Parsing: Analyzing the grammatical structure of sentences\n- Machine Translation: Converting text from one language to another\n- Question Answering: Providing answers to natural language questions\n- Summarization: Creating concise versions of longer texts\n- Text Generation: Producing human-like text based on prompts or conditions\n\nRecent advances in transformer-based models like BERT, GPT, and T5 have significantly improved performance across these tasks. These models use attention mechanisms to understand context and relationships between words, allowing for more nuanced language understanding.\n\nApplications of NLP include virtual assistants, chatbots, content analysis, automated reporting, and language translation services. As models continue to grow in size and capability, they increasingly approach human-level performance on many language tasks.",
+            "tags": ["NLP", "AI", "Language"],
+            "entities": [
+                {"name": "BERT", "type": "Model"},
+                {"name": "GPT", "type": "Model"},
+                {"name": "Text Classification", "type": "Task"},
+                {"name": "Machine Translation", "type": "Task"},
+                {"name": "Transformers", "type": "Architecture"}
+            ]
+        },
+        "5": {
+            "id": "5",
+            "title": "Computer Vision Basics",
+            "summary": "Fundamentals of computer vision and image processing.",
+            "type": "pdf",
+            "source": "Computer_Vision_Basics.pdf",
+            "created_at": datetime.now().replace(day=datetime.now().day-12).isoformat(),
+            "content": "Computer Vision (CV) is the field of computer science that enables machines to derive meaningful information from digital images and videos. It aims to automate tasks that the human visual system can do.\n\nFundamental concepts in Computer Vision include:\n\n1. Image Formation and Representation: How images are captured and stored digitally\n2. Image Preprocessing: Techniques like noise reduction, contrast enhancement, and normalization\n3. Feature Detection and Extraction: Identifying key points and patterns in images\n4. Image Segmentation: Dividing images into meaningful regions\n5. Object Detection and Recognition: Identifying and classifying objects within images\n6. Motion Analysis: Tracking movement across video frames\n7. 3D Vision: Reconstructing three-dimensional information from 2D images\n\nModern computer vision relies heavily on deep learning, particularly Convolutional Neural Networks (CNNs) that are specifically designed to process pixel data. Architectures like ResNet, YOLO, and U-Net have achieved remarkable results in various CV tasks.\n\nApplications of computer vision are vast and include facial recognition, autonomous vehicles, medical image analysis, augmented reality, industrial inspection, and surveillance systems. As algorithms improve and computing power increases, the capabilities and applications of computer vision continue to expand rapidly.",
+            "tags": ["Computer Vision", "AI", "Image Processing"],
+            "entities": [
+                {"name": "CNN", "type": "Architecture"},
+                {"name": "ResNet", "type": "Model"},
+                {"name": "YOLO", "type": "Model"},
+                {"name": "Object Detection", "type": "Task"},
+                {"name": "Image Segmentation", "type": "Task"}
+            ]
+        }
+    }
+    
+    try:
+        # Log the API call for debugging
+        print(f"[DEBUG] Fetching content item with ID: {content_id}")
+        
+        # Call the API to get content item details
+        response = requests.get(
+            f"{API_BASE_URL}/knowledge/item/{content_id}",
+            timeout=5  # 5 second timeout
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("status") == "success":
+                item = result.get("item", {})
+                print(f"[DEBUG] Successfully fetched content item: {item.get('title', 'Unknown')}")
+                return item
+            else:
+                print(f"[DEBUG] API returned non-success status: {result}")
+        else:
+            print(f"[DEBUG] API returned status code: {response.status_code}")
+    
+    except Exception as e:
+        print(f"[ERROR] Error fetching content item: {str(e)}")
+    
+    # Return demo data if API call fails or item not found
+    if content_id in demo_data:
+        print(f"[DEBUG] Returning demo data for content ID: {content_id}")
+        demo_item = demo_data[content_id]
+    else:
+        # If the content_id doesn't match our demo data, create enriched demo content
+        print(f"[DEBUG] Content ID {content_id} not found, creating dynamic demo item")
+        
+        # Extract a readable ID segment from UUID if possible
+        short_id = content_id
+        if '-' in content_id:
+            short_id = content_id.split('-')[0][:8]
+        
+        # Select a demo item as a template (rotating based on ID)
+        demo_keys = list(demo_data.keys())
+        template_index = hash(content_id) % len(demo_keys)
+        template_id = demo_keys[template_index]
+        demo_item = demo_data[template_id].copy()
+        
+        # Customize the demo item
+        demo_item["id"] = content_id
+        demo_item["title"] = f"Dynamic Content {short_id.upper()}"
+        demo_item["summary"] = f"Auto-generated content for ID: {content_id}"
+        
+        # Ensure content field is well-formed
+        if "content" not in demo_item or not demo_item["content"]:
+            demo_item["content"] = f"This is dynamically generated content for ID: {content_id}\n\nThe actual content could not be retrieved from the API, so this placeholder is shown instead.\n\nIn a production environment, you would see the actual content here."
+    
+    # Ensure all necessary fields exist
+    required_fields = {
+        "type": "unknown",
+        "source": "Generated Content",
+        "created_at": datetime.now().isoformat(),
+        "tags": ["demo", "placeholder"],
+        "content": "No content available."
+    }
+    
+    for field, default_value in required_fields.items():
+        if field not in demo_item or demo_item[field] is None:
+            demo_item[field] = default_value
+    
+
+    # Perform a final sanitation of data to ensure it's properly formatted
+    sanitized_item = {}
+    for key, value in demo_item.items():
+        # Convert any method references to strings
+        if callable(value):
+            sanitized_item[key] = str(value)
+        # Convert any complex objects to strings
+        elif not isinstance(value, (str, int, float, bool, list, dict, type(None))):
+            sanitized_item[key] = str(value)
+        # Ensure lists contain only simple types
+        elif isinstance(value, list):
+            sanitized_list = []
+            for item in value:
+                if isinstance(item, (str, int, float, bool)):
+                    sanitized_list.append(item)
+                elif isinstance(item, dict):
+                    # For dictionaries in lists, sanitize them recursively
+                    sanitized_dict = {}
+                    for k, v in item.items():
+                        if callable(v):
+                            sanitized_dict[k] = str(v)
+                        elif not isinstance(v, (str, int, float, bool, list, dict, type(None))):
+                            sanitized_dict[k] = str(v)
+                        else:
+                            sanitized_dict[k] = v
+                    sanitized_list.append(sanitized_dict)
+                else:
+                    sanitized_list.append(str(item))
+            sanitized_item[key] = sanitized_list
+        # For direct dictionaries, keep as is (they'll be sanitized at the end if needed)
+        elif isinstance(value, dict):
+            sanitized_item[key] = value
+        # Keep other simple types as is
+        else:
+            sanitized_item[key] = value
+    
+    # Ensure required fields exist and have the right types
+    required_fields = {
+        "id": str(demo_item.get("id", "unknown")),
+        "title": str(demo_item.get("title", "Untitled Content")),
+        "summary": str(demo_item.get("summary", "No summary available")),
+        "type": str(demo_item.get("type", demo_item.get("content_type", "unknown"))),
+        "content_type": str(demo_item.get("content_type", demo_item.get("type", "unknown"))),
+        "source": str(demo_item.get("source", "Unknown source")),
+        "created_at": str(demo_item.get("created_at", datetime.now().isoformat())),
+        "content": str(demo_item.get("content", "No content available")),
+        "tags": demo_item.get("tags", []) if isinstance(demo_item.get("tags"), list) else ["untagged"],
+        "entities": demo_item.get("entities", []) if isinstance(demo_item.get("entities"), list) else []
+    }
+    
+    # Update sanitized item with required fields
+    for key, value in required_fields.items():
+        sanitized_item[key] = value
+    
+    print(f"[DEBUG] Returning sanitized content item with title: {sanitized_item['title']}")
+    return sanitized_item
+
+def get_components(component_type=None):
+    """Get MCP components from the API (with fallback to demo data)"""
     try:
         # Call the API to get components
         params = {}
         if component_type:
             params["tag"] = component_type
             
-        response = requests.get(f"{API_BASE_URL}/components/", params=params, timeout=DEFAULT_TIMEOUT)
+        response = requests.get(f"{API_BASE_URL}/components/", params=params)
         
         if response.status_code == 200:
-            result = response.json()
-            if result.get("status") == "success":
-                return result.get("components", [])
-            else:
-                return []
-        else:
-            return []
-    
+            return response.json()
     except Exception as e:
-        return []
+        print(f"Error fetching components: {str(e)}")
+    
+    # Return demo data if API call fails
+    return [
+        {
+            "id": "extract_summary",
+            "name": "Extract Summary",
+            "type": "Content Analysis",
+            "version": "1.2"
+        },
+        {
+            "id": "identify_themes",
+            "name": "Identify Themes",
+            "type": "Content Analysis",
+            "version": "1.0"
+        },
+        {
+            "id": "generate_digest",
+            "name": "Generate Digest",
+            "type": "Digest Generation",
+            "version": "2.1"
+        }
+    ]
 
 def get_oauth_status(service):
     """Get OAuth status for a specific service"""
@@ -257,7 +483,7 @@ def get_oauth_status(service):
             if response.status_code == 200:
                 return response.json()
     except Exception as e:
-        return {"status": "unknown"}
+        print(f"Error fetching OAuth status: {str(e)}")
     
     return {"status": "unknown"}
 
@@ -296,7 +522,7 @@ def dashboard():
             all_content_response = requests.get(
                 f"{API_BASE_URL}/knowledge/list", 
                 params={"limit": 1000},
-                timeout=DEFAULT_TIMEOUT
+                timeout=5
             )
             if all_content_response.status_code == 200:
                 all_result = all_content_response.json()
@@ -414,31 +640,16 @@ def process_content():
                             "model": model
                         }
                     },
-                    timeout=LONG_TIMEOUT  # 30 second timeout
+                    timeout=30  # 30 second timeout
                 )
                 
                 print(f"[DEBUG] API response status: {response.status_code}")
                 
                 if response.status_code == 200:
                     result = response.json()
-                    print(f"[DEBUG] Process URL response: {result}")
-                    
                     if result.get("status") == "success":
-                        # Extract content ID from the response
-                        content_id = None
-                        if result.get("storage", {}).get("content_id"):
-                            content_id = result["storage"]["content_id"]
-                        elif result.get("content_id"):
-                            content_id = result["content_id"]
-                        elif result.get("processed_content", {}).get("id"):
-                            content_id = result["processed_content"]["id"]
-                        
-                        print(f"[DEBUG] Content ID from processing: {content_id}")
-                        
                         flash(f"Successfully processed URL: {url}", "success")
                         result["message"] = f"Successfully processed URL: {url}"
-                        if content_id:
-                            result["content_id"] = content_id
                     else:
                         flash(f"Error processing URL: {result.get('message', 'Unknown error')}", "error")
                 else:
@@ -481,7 +692,7 @@ def process_content():
                             "model": model
                         }
                     },
-                    timeout=LONG_TIMEOUT  # 30 second timeout
+                    timeout=30  # 30 second timeout
                 )
                 
                 print(f"[DEBUG] API response status: {response.status_code}")
@@ -561,7 +772,7 @@ def process_content():
                                     "summarize": summarize
                                 }
                             },
-                            timeout=LONG_TIMEOUT + 15  # 45 second timeout for file processing
+                            timeout=45  # 45 second timeout for file processing
                         )
                         
                         print(f"[DEBUG] API response status: {response.status_code}")
@@ -631,7 +842,7 @@ def process_content():
                             "include_attachments": include_attachments
                         }
                     },
-                    timeout=LONG_TIMEOUT  # 30 second timeout
+                    timeout=30  # 30 second timeout
                 )
                 
                 print(f"[DEBUG] API response status: {response.status_code}")
@@ -693,6 +904,7 @@ def process_content():
         else:
             models = {"Auto": "Auto-select", "GPT-4": "GPT-4", "Claude 3": "Claude 3", "Llama 3": "Llama 3"}
     except Exception as e:
+        print(f"Error fetching models: {str(e)}")
         models = {"Auto": "Auto-select", "GPT-4": "GPT-4", "Claude 3": "Claude 3", "Llama 3": "Llama 3"}
     
     return render_template('process_content.html', 
@@ -749,13 +961,20 @@ def content_detail(content_id):
     # Get content item
     content = get_content_item(content_id)
     
-    # Don't sanitize the content - pass it as is
-    # The template should handle the display properly
+    # Force dictionary values to strings
+    sanitized_content = {}
+    for key, value in content.items():
+        if isinstance(value, dict):
+            sanitized_content[key] = str(value)
+        elif isinstance(value, list):
+            sanitized_content[key] = [str(item) if isinstance(item, dict) else item for item in value]
+        else:
+            sanitized_content[key] = value
     
     return render_template('content_detail.html', 
                           active_page='view_content', 
                           nav_items=NAV_ITEMS,
-                          content=content,
+                          content=sanitized_content,
                           format_date=format_date)
 
 @app.route('/debug/content/<content_id>')
@@ -816,7 +1035,7 @@ def search():
             response = requests.get(
                 f"{API_BASE_URL}/knowledge/search", 
                 params=search_params,
-                timeout=DEFAULT_TIMEOUT
+                timeout=5
             )
             
             if response.status_code == 200:
@@ -933,7 +1152,7 @@ def digests():
             response = requests.post(
                 f"{API_BASE_URL}/agents/digest/create", 
                 json=digest_request,
-                timeout=DEFAULT_TIMEOUT
+                timeout=10
             )
             
             if response.status_code == 200:
@@ -954,7 +1173,7 @@ def digests():
     # GET request - display digests page
     # Try to get digests from the API
     try:
-        response = requests.get(f"{API_BASE_URL}/agents/digest/list", timeout=DEFAULT_TIMEOUT)
+        response = requests.get(f"{API_BASE_URL}/agents/digest/list", timeout=5)
         
         if response.status_code == 200:
             result = response.json()
@@ -1009,7 +1228,7 @@ def digests():
     
     # Get available models
     try:
-        response = requests.get(f"{API_BASE_URL}/model-router/available-models", timeout=DEFAULT_TIMEOUT)
+        response = requests.get(f"{API_BASE_URL}/model-router/available-models", timeout=3)
         if response.status_code == 200:
             result = response.json()
             if result.get("status") == "success":
@@ -1045,6 +1264,7 @@ def component_editor():
             else:
                 component = {"id": component_id, "name": "Component Not Found", "content": "# Error loading component"}
         except Exception as e:
+            print(f"Error fetching component: {str(e)}")
             component = {"id": component_id, "name": "Component Not Found", "content": "# Error loading component"}
     else:
         component = None
@@ -1067,177 +1287,12 @@ def component_library():
                           nav_items=NAV_ITEMS,
                           components=components)
 
-@app.route('/settings', methods=['GET', 'POST'])
+@app.route('/settings')
 def settings():
     """Settings page"""
-    if request.method == 'POST':
-        # Handle settings update
-        section = request.form.get('section')
-        print(f"[DEBUG] Updating settings for section: {section}")
-        
-        try:
-            # Determine which settings section to update
-            if section == 'general':
-                settings_data = {
-                    'system_name': request.form.get('system_name'),
-                    'default_language': request.form.get('default_language'),
-                    'timezone': request.form.get('timezone'),
-                    'date_format': request.form.get('date_format'),
-                    'time_format': request.form.get('time_format')
-                }
-                endpoint = 'settings/general'
-                
-            elif section == 'api':
-                settings_data = {
-                    'api_host': request.form.get('api_host'),
-                    'api_port': request.form.get('api_port'),
-                    'ui_port': request.form.get('ui_port'),
-                    'api_timeout': request.form.get('api_timeout')
-                }
-                endpoint = 'settings/api'
-                
-            elif section == 'models':
-                settings_data = {
-                    'default_model': request.form.get('default_model'),
-                    'openai_key': request.form.get('openai_key'),
-                    'openai_model': request.form.get('openai_model'),
-                    'anthropic_key': request.form.get('anthropic_key'),
-                    'anthropic_model': request.form.get('anthropic_model'),
-                    'ollama_host': request.form.get('ollama_host'),
-                    'ollama_model': request.form.get('ollama_model')
-                }
-                endpoint = 'settings/models'
-                
-            elif section == 'processors':
-                # Get enabled processors from checkboxes
-                enabled_processors = []
-                for processor in ['url', 'pdf', 'text', 'audio', 'social']:
-                    if f'processor_{processor}' in request.form:
-                        enabled_processors.append(processor)
-                
-                settings_data = {
-                    'enabled_processors': enabled_processors,
-                    'pdf_extract_images': request.form.get('pdf_extract_images'),
-                    'url_depth': request.form.get('url_depth'),
-                    'audio_transcription_model': request.form.get('audio_transcription_model'),
-                    'text_summary_length': request.form.get('text_summary_length')
-                }
-                endpoint = 'settings/processors'
-                
-            elif section == 'agents':
-                settings_data = {
-                    'contentmind_model': request.form.get('contentmind_model'),
-                    'digest_model': request.form.get('digest_model'),
-                    'researcher_model': request.form.get('researcher_model'),
-                    'gateway_model': request.form.get('gateway_model'),
-                    'concurrent_agents': request.form.get('concurrent_agents')
-                }
-                endpoint = 'settings/agents'
-                
-            elif section == 'storage':
-                settings_data = {
-                    'vector_store_persist_dir': request.form.get('vector_store_persist_dir'),
-                    'database_url': request.form.get('database_url'),
-                    'backup_enabled': 'backup_enabled' in request.form,
-                    'backup_interval': request.form.get('backup_interval'),
-                    'retention_days': request.form.get('retention_days')
-                }
-                endpoint = 'settings/storage'
-                
-            else:
-                flash(f"Unknown settings section: {section}", "error")
-                return redirect(url_for('settings'))
-            
-            # Call API to update settings
-            response = requests.post(
-                f"{API_BASE_URL}/{endpoint}",
-                json=settings_data,
-                timeout=DEFAULT_TIMEOUT
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("status") == "success":
-                    flash(f"Settings updated successfully", "success")
-                else:
-                    flash(f"Error updating settings: {result.get('message', 'Unknown error')}", "error")
-            else:
-                flash(f"Error updating settings: HTTP {response.status_code}", "error")
-                
-        except Exception as e:
-            flash(f"Error updating settings: {str(e)}", "error")
-            print(f"[ERROR] Exception updating settings: {str(e)}")
-            
-        return redirect(url_for('settings'))
-    
-    # GET request - load current settings
-    current_settings = {}
-    
-    try:
-        # Fetch current settings from API
-        response = requests.get(f"{API_BASE_URL}/settings", timeout=DEFAULT_TIMEOUT)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get("status") == "success":
-                current_settings = result.get("settings", {})
-                print(f"[DEBUG] Loaded settings from API")
-            else:
-                print(f"[DEBUG] API returned non-success status: {result}")
-        else:
-            print(f"[DEBUG] API returned error status: {response.status_code}")
-            
-    except Exception as e:
-        print(f"[ERROR] Error fetching settings: {str(e)}")
-        
-        # Load from config file as fallback
-        try:
-            with open(Path(project_root) / "server_config.json", "r") as f:
-                config = json.load(f)
-                
-            current_settings = {
-                'general': {
-                    'system_name': 'BlueAbel AIOS',
-                    'default_language': 'en',
-                    'timezone': 'UTC',
-                    'date_format': 'YYYY-MM-DD',
-                    'time_format': '24h'
-                },
-                'api': {
-                    'api_host': config.get('api', {}).get('host', '127.0.0.1'),
-                    'api_port': config.get('api', {}).get('port', 8081),
-                    'ui_port': config.get('ui', {}).get('port', 9002),
-                    'api_timeout': DEFAULT_TIMEOUT
-                },
-                'models': {
-                    'default_model': 'auto',
-                    'openai_key': os.environ.get('OPENAI_API_KEY', ''),
-                    'anthropic_key': os.environ.get('ANTHROPIC_API_KEY', ''),
-                    'ollama_host': config.get('llm', {}).get('local', {}).get('host', 'http://localhost:11434'),
-                    'ollama_model': config.get('llm', {}).get('local', {}).get('default_model', 'llama3')
-                },
-                'storage': {
-                    'vector_store_persist_dir': config.get('vector_store', {}).get('persist_directory', 'app/db/vector_db'),
-                    'database_url': config.get('database', {}).get('url', 'sqlite:///./bluelabel.db')
-                }
-            }
-            print(f"[DEBUG] Loaded settings from config file")
-            
-        except Exception as e:
-            print(f"[ERROR] Error loading config file: {str(e)}")
-    
-    # Ensure current_settings has at least empty dictionaries for each section
-    if not current_settings:
-        current_settings = {}
-    
-    for section in ['general', 'api', 'models', 'processors', 'agents', 'storage']:
-        if section not in current_settings:
-            current_settings[section] = {}
-    
     return render_template('settings.html', 
                           active_page='settings', 
-                          nav_items=NAV_ITEMS,
-                          settings=current_settings)
+                          nav_items=NAV_ITEMS)
 
 @app.route('/oauth-setup')
 def oauth_setup():
@@ -1293,7 +1348,7 @@ def api_diagnostics():
                 "content": "This is a test message for API diagnostics.",
                 "metadata": {"create_digest": False}
             },
-            timeout=DEFAULT_TIMEOUT
+            timeout=10
         )
     }
     

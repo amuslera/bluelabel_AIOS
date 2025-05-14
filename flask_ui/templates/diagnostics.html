@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}API Diagnostics - BlueAbel AIOS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>API Diagnostics</h1>
+    <p class="page-description">Check the status of the BlueAbel AIOS API and troubleshoot connection issues.</p>
+</div>
+
+<div class="card">
+    <h3 class="card-title">API General Status</h3>
+    
+    <div class="status-indicator {% if base_status %}status-online{% else %}status-offline{% endif %}">
+        <span class="status-dot"></span>
+        <span class="status-text">{% if base_status %}Online{% else %}Offline{% endif %}</span>
+    </div>
+    
+    <div class="info-box mt-20">
+        <p><strong>API Base URL:</strong> {{ api_base_url }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">Endpoint Status</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for name, result in endpoints.items() %}
+            <tr>
+                <td>{{ name }}</td>
+                <td>
+                    <span class="status-badge {% if result.status == 'ok' %}status-success{% else %}status-error{% endif %}">
+                        {{ result.status }}
+                    </span>
+                </td>
+                <td>
+                    {% if result.status == 'ok' %}
+                        <span class="text-success">Successful response</span>
+                    {% elif result.status == 'timeout' %}
+                        <span class="text-error">{{ result.details }}</span>
+                    {% elif result.status == 'connection_error' %}
+                        <span class="text-error">{{ result.details }}</span>
+                    {% elif result.status == 'error' %}
+                        <span class="text-error">HTTP {{ result.code }}</span>
+                        <div class="error-details">{{ result.details }}</div>
+                    {% else %}
+                        <span class="text-error">{{ result.details }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h3 class="card-title">Server Configuration</h3>
+    
+    <div class="code-block">
+        <pre>{{ server_config|tojson(indent=2) }}</pre>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title">Troubleshooting Steps</h3>
+    
+    <div class="accordion">
+        <div class="accordion-item">
+            <div class="accordion-header">1. Check API Server Status</div>
+            <div class="accordion-content">
+                <p>Verify that the API server is running:</p>
+                <ol>
+                    <li>Check the server process with <code>ps aux | grep run_server.py</code></li>
+                    <li>Restart the API server if needed with <code>./run.sh restart api</code></li>
+                    <li>Check the API logs for errors</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <div class="accordion-header">2. Check Connectivity</div>
+            <div class="accordion-content">
+                <p>Make sure the API is accessible:</p>
+                <ol>
+                    <li>Check that the API host and port are correct in server_config.json</li>
+                    <li>Try a simple curl request: <code>curl "{{ api_base_url }}/status"</code></li>
+                    <li>Verify that no firewall is blocking the connection</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <div class="accordion-header">3. Address Timeout Issues</div>
+            <div class="accordion-content">
+                <p>If you're experiencing timeouts:</p>
+                <ol>
+                    <li>Increase the timeout settings in server_config.json</li>
+                    <li>Check that the LLM services are responsive</li>
+                    <li>Consider implementing asynchronous processing for long-running tasks</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <div class="accordion-header">4. Test Simple Endpoints First</div>
+            <div class="accordion-content">
+                <p>Start with simple endpoints to isolate the issue:</p>
+                <ol>
+                    <li>Test the status endpoint: <code>curl "{{ api_base_url }}/status"</code></li>
+                    <li>Test listing content: <code>curl "{{ api_base_url }}/knowledge/list?limit=1"</code></li>
+                    <li>Check available models: <code>curl "{{ api_base_url }}/model-router/available-models"</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Accordion functionality
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                
+                // Toggle active class
+                this.classList.toggle('active');
+                
+                // Toggle display
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

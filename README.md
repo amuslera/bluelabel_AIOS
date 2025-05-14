@@ -796,3 +796,63 @@ This is a personal project for now. Contribution guidelines may be added later.
 ## License
 
 [License information to be determined]
+
+# Flask UI and FastAPI Backend
+
+This project consists of a Flask UI and a FastAPI backend. The Flask UI connects to the FastAPI backend to fetch and display data.
+
+## Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
+
+2. **Create a virtual environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\\Scripts\\activate`
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure the backend:**
+   - Ensure `server_config.json` is correctly set up with the FastAPI backend URL (e.g., `http://127.0.0.1:8081`).
+
+## Running the Backend
+
+Start the FastAPI backend:
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8081 --reload
+```
+
+## Running the Flask UI
+
+Start the Flask UI:
+```bash
+python3 flask_ui/app.py
+```
+
+Visit [http://127.0.0.1:8080/](http://127.0.0.1:8080/) to see the dashboard.
+
+## Running Tests
+
+Run tests using pytest:
+```bash
+pytest
+```
+
+## Project Structure
+
+- `flask_ui/`: Contains the Flask UI code.
+- `app/`: Contains the FastAPI backend code.
+- `server_config.json`: Configuration file for the Flask UI.
+
+## Notes
+
+- Debug print statements have been removed for production.
+- Ensure no sensitive data is included in configuration files.
