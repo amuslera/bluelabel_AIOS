@@ -1,4 +1,4 @@
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -64,3 +64,6 @@ server.log
 streamlit.log
 streamlit_app.log
 test_output.log
+
+# Environment variables and secrets
+server_config.json

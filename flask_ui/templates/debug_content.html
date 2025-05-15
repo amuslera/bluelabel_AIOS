@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Content Debug</title>
+    <style>
+        body { font-family: monospace; line-height: 1.6; margin: 20px; }
+        h1 { color: #333; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow: auto; }
+        .key { color: #07a; }
+        .null { color: #999; }
+        .string { color: #690; }
+        .number { color: #905; }
+        .boolean { color: #07a; }
+        .section { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Content Debug Page</h1>
+    
+    <div class="section">
+        <h2>Content ID:</h2>
+        <pre>{{ content_id }}</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Content Object Type:</h2>
+        <pre>{{ content|type }}</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Content Object Keys:</h2>
+        <pre>{% if content is mapping %}{{ content.keys()|list }}{% else %}Not a mapping/dictionary{% endif %}</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Content Raw Dump:</h2>
+        <pre>{{ content|pprint }}</pre>
+    </div>
+    
+    <h2>Content Fields:</h2>
+    
+    <div class="section">
+        <h3>Title:</h3>
+        <pre>{{ content.title|default('Not available') }} (Type: {{ content.title|type }})</pre>
+    </div>
+    
+    <div class="section">
+        <h3>Type:</h3>
+        <pre>Primary type field: {{ content.type|default('Not available') }} (Type: {{ content.type|type }})
+Content type field: {{ content.content_type|default('Not available') }} (Type: {{ content.content_type|type }})</pre>
+    </div>
+    
+    <div class="section">
+        <h3>Summary:</h3>
+        <pre>{{ content.summary|default('Not available') }} (Type: {{ content.summary|type }})</pre>
+    </div>
+    
+    <div class="section">
+        <h3>Created At:</h3>
+        <pre>{{ content.created_at|default('Not available') }} (Type: {{ content.created_at|type }})</pre>
+    </div>
+    
+    <div class="section">
+        <h3>Tags:</h3>
+        <pre>{{ content.tags|default('Not available') }} (Type: {{ content.tags|type }})</pre>
+    </div>
+    
+    <div class="section">
+        <h3>Content Text:</h3>
+        <pre>{% if content.content %}
+{{ content.content[:200] }}... (truncated, total length: {{ content.content|length }})
+{% else %}
+Not available
+{% endif %}</pre>
+    </div>
+    
+    <div class="section">
+        <a href="{{ url_for('view_content') }}">Back to Content List</a> | 
+        <a href="{{ url_for('content_detail', content_id=content_id) }}">View Normal Content Page</a>
+    </div>
+</body>
+</html>

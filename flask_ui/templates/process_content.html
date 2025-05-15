@@ -21,7 +21,7 @@
         <div class="card">
             <h3 class="card-title">Process Web Content</h3>
             
-            <form method="POST" action="{{ url_for('process_content') }}">
+            <form id="url-form" class="process-form" data-type="url">
                 <input type="hidden" name="content_type" value="url">
                 
                 <div class="form-group">
@@ -54,6 +54,37 @@
                 </div>
                 
                 <button type="submit" class="btn">Process URL</button>
+                
+                <div class="processing-status" style="display: none;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-message">Processing...</div>
+                    <div class="processing-steps">
+                        <div class="processing-step" data-step="initialize">
+                            <span class="step-icon">⏳</span>
+                            <span class="step-text">Initializing request...</span>
+                        </div>
+                        <div class="processing-step" data-step="fetch">
+                            <span class="step-icon">🔍</span>
+                            <span class="step-text">Fetching content...</span>
+                        </div>
+                        <div class="processing-step" data-step="analyze">
+                            <span class="step-icon">🧠</span>
+                            <span class="step-text">Analyzing content...</span>
+                        </div>
+                        <div class="processing-step" data-step="store">
+                            <span class="step-icon">💾</span>
+                            <span class="step-text">Storing results...</span>
+                        </div>
+                        <div class="processing-step" data-step="complete">
+                            <span class="step-icon">✅</span>
+                            <span class="step-text">Processing complete!</span>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -63,7 +94,7 @@
         <div class="card">
             <h3 class="card-title">Process Text Content</h3>
             
-            <form method="POST" action="{{ url_for('process_content') }}">
+            <form id="text-form" class="process-form" data-type="text">
                 <input type="hidden" name="content_type" value="text">
                 
                 <div class="form-group">
@@ -96,6 +127,37 @@
                 </div>
                 
                 <button type="submit" class="btn">Process Text</button>
+                
+                <div class="processing-status" style="display: none;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-message">Processing...</div>
+                    <div class="processing-steps">
+                        <div class="processing-step" data-step="initialize">
+                            <span class="step-icon">⏳</span>
+                            <span class="step-text">Initializing request...</span>
+                        </div>
+                        <div class="processing-step" data-step="analyze">
+                            <span class="step-icon">🧠</span>
+                            <span class="step-text">Analyzing content...</span>
+                        </div>
+                        <div class="processing-step" data-step="extract">
+                            <span class="step-icon">📊</span>
+                            <span class="step-text">Extracting information...</span>
+                        </div>
+                        <div class="processing-step" data-step="store">
+                            <span class="step-icon">💾</span>
+                            <span class="step-text">Storing results...</span>
+                        </div>
+                        <div class="processing-step" data-step="complete">
+                            <span class="step-icon">✅</span>
+                            <span class="step-text">Processing complete!</span>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -105,7 +167,7 @@
         <div class="card">
             <h3 class="card-title">Process File Content</h3>
             
-            <form method="POST" action="{{ url_for('process_content') }}" enctype="multipart/form-data">
+            <form id="file-form" class="process-form" data-type="file" enctype="multipart/form-data">
                 <input type="hidden" name="content_type" value="file">
                 
                 <div class="form-group">
@@ -131,6 +193,41 @@
                 </div>
                 
                 <button type="submit" class="btn">Process File</button>
+                
+                <div class="processing-status" style="display: none;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-message">Processing...</div>
+                    <div class="processing-steps">
+                        <div class="processing-step" data-step="initialize">
+                            <span class="step-icon">⏳</span>
+                            <span class="step-text">Initializing upload...</span>
+                        </div>
+                        <div class="processing-step" data-step="upload">
+                            <span class="step-icon">📤</span>
+                            <span class="step-text">Uploading file...</span>
+                        </div>
+                        <div class="processing-step" data-step="process">
+                            <span class="step-icon">🔄</span>
+                            <span class="step-text">Processing file...</span>
+                        </div>
+                        <div class="processing-step" data-step="extract">
+                            <span class="step-icon">📄</span>
+                            <span class="step-text">Extracting content...</span>
+                        </div>
+                        <div class="processing-step" data-step="analyze">
+                            <span class="step-icon">🧠</span>
+                            <span class="step-text">Analyzing content...</span>
+                        </div>
+                        <div class="processing-step" data-step="complete">
+                            <span class="step-icon">✅</span>
+                            <span class="step-text">Processing complete!</span>
+                        </div>
+                    </div>
+                </div>
             </form>
             
             <div class="info-box mt-20">
@@ -144,7 +241,7 @@
         <div class="card">
             <h3 class="card-title">Process Email Content</h3>
             
-            <form method="POST" action="{{ url_for('process_content') }}">
+            <form id="email-form" class="process-form" data-type="email">
                 <input type="hidden" name="content_type" value="email">
                 
                 <div class="form-group">
@@ -165,6 +262,37 @@
                 </div>
                 
                 <button type="submit" class="btn">Process Email</button>
+                
+                <div class="processing-status" style="display: none;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-message">Processing...</div>
+                    <div class="processing-steps">
+                        <div class="processing-step" data-step="initialize">
+                            <span class="step-icon">⏳</span>
+                            <span class="step-text">Initializing request...</span>
+                        </div>
+                        <div class="processing-step" data-step="process">
+                            <span class="step-icon">📧</span>
+                            <span class="step-text">Processing email content...</span>
+                        </div>
+                        <div class="processing-step" data-step="analyze">
+                            <span class="step-icon">🧠</span>
+                            <span class="step-text">Analyzing content...</span>
+                        </div>
+                        <div class="processing-step" data-step="store">
+                            <span class="step-icon">💾</span>
+                            <span class="step-text">Storing results...</span>
+                        </div>
+                        <div class="processing-step" data-step="complete">
+                            <span class="step-icon">✅</span>
+                            <span class="step-text">Processing complete!</span>
+                        </div>
+                    </div>
+                </div>
             </form>
             
             <div class="info-box mt-20">
@@ -173,6 +301,98 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Processing Status Styles */
+    .processing-status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+
+    .progress-container {
+        margin-bottom: 15px;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-fill {
+        position: absolute;
+        height: 100%;
+        background-color: #4a6bf2;
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+
+    .status-message {
+        font-weight: 500;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .processing-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .processing-step {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: #ffffff;
+        border-left: 3px solid transparent;
+        opacity: 0.5;
+        transition: all 0.3s ease;
+    }
+
+    .processing-step.active {
+        opacity: 1;
+        border-left-color: #4a6bf2;
+        background-color: #f0f5ff;
+    }
+
+    .processing-step.completed {
+        opacity: 1;
+        border-left-color: #10b981;
+    }
+
+    .step-icon {
+        margin-right: 10px;
+        font-size: 18px;
+    }
+
+    .processing-step.completed .step-icon {
+        color: #10b981;
+    }
+
+    .processing-step.active .step-icon {
+        color: #4a6bf2;
+    }
+
+    /* Animation for the progress bar */
+    @keyframes pulse {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+    }
+
+    .processing-step.active {
+        animation: pulse 1.5s infinite;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -196,6 +416,125 @@
                 document.getElementById(tabId).classList.add('active');
             });
         });
+
+        // Form processing functionality
+        const processForms = document.querySelectorAll('.process-form');
+        
+        processForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form type and specific elements
+                const formType = this.getAttribute('data-type');
+                const processingStatus = this.querySelector('.processing-status');
+                const progressFill = this.querySelector('.progress-fill');
+                const statusMessage = this.querySelector('.status-message');
+                const processingSteps = this.querySelectorAll('.processing-step');
+                const submitButton = this.querySelector('button[type="submit"]');
+                
+                // Show processing status
+                processingStatus.style.display = 'block';
+                submitButton.disabled = true;
+                
+                // Initialize first step
+                updateProcessingStep(processingSteps, 'initialize', 'active');
+                progressFill.style.width = '10%';
+                
+                // Create FormData from the form
+                const formData = new FormData(this);
+                
+                // Simulate progress updates based on form type
+                let currentStep = 0;
+                const steps = Array.from(processingSteps).map(step => step.getAttribute('data-step'));
+                
+                // Progress simulation intervals - don't include the complete step
+                const progressSimulation = setInterval(() => {
+                    if (currentStep < steps.length - 2) {  // Stop before the "complete" step
+                        // Complete current step
+                        updateProcessingStep(processingSteps, steps[currentStep], 'completed');
+                        
+                        // Move to next step
+                        currentStep++;
+                        updateProcessingStep(processingSteps, steps[currentStep], 'active');
+                        
+                        // Update progress bar
+                        const progressPercentage = Math.min(10 + ((currentStep) / (steps.length - 1)) * 70, 75);
+                        progressFill.style.width = progressPercentage + '%';
+                        
+                        // Update status message
+                        statusMessage.textContent = processingSteps[currentStep].querySelector('.step-text').textContent;
+                    } else {
+                        // If we reach the second-to-last step, clear the interval
+                        clearInterval(progressSimulation);
+                    }
+                }, formType === 'file' ? 1500 : 1000); // Files take longer to process
+                
+                // Send the actual AJAX request
+                fetch('/process-content', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'  // Ensure it's treated as AJAX
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Clear the simulation interval when we get a response
+                    clearInterval(progressSimulation);
+                    
+                    // Complete all steps
+                    processingSteps.forEach((step, index) => {
+                        updateProcessingStep(processingSteps, steps[index], 'completed');
+                    });
+                    
+                    // Set progress to 100%
+                    progressFill.style.width = '100%';
+                    
+                    if (data.status === 'success') {
+                        statusMessage.textContent = data.message || 'Processing complete!';
+                        statusMessage.style.color = '#10b981';  // Green color for success
+                        
+                        // Keep the success message visible for 3 seconds before resetting
+                        setTimeout(() => {
+                            submitButton.disabled = false;
+                            processingStatus.style.display = 'none';
+                            form.reset();
+                            statusMessage.style.color = '';  // Reset color
+                            statusMessage.textContent = '';  // Clear message
+                        }, 3000);  // Increased to 3 seconds
+                    } else {
+                        // Handle error
+                        statusMessage.textContent = data.message || 'Error processing content. Please try again.';
+                        statusMessage.style.color = '#ef4444';  // Red color for error
+                        submitButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    // Clear the simulation interval
+                    clearInterval(progressSimulation);
+                    
+                    // Display error
+                    statusMessage.textContent = 'Error: ' + error.message;
+                    statusMessage.style.color = '#ef4444';
+                    
+                    // Re-enable submit button
+                    submitButton.disabled = false;
+                });
+            });
+        });
+        
+        // Helper function to update processing step status
+        function updateProcessingStep(steps, stepName, status) {
+            steps.forEach(step => {
+                if (step.getAttribute('data-step') === stepName) {
+                    // Remove existing statuses
+                    step.classList.remove('active', 'completed');
+                    
+                    // Add new status
+                    step.classList.add(status);
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

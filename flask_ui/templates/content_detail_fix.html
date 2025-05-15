@@ -1,110 +1,68 @@
 {% extends "base.html" %}
 
-{% block title %}Content Details - BlueAbel AIOS{% endblock %}
+{% block title %}Content Details - {{ content.title|default('Content') }} - BlueAbel AIOS{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1>Content Details</h1>
     <div class="page-actions">
         <a href="{{ url_for('view_content') }}" class="btn btn-secondary">Back to Content List</a>
-        <a href="{{ url_for('debug_content_item', content_id=content.id) }}" class="btn btn-secondary">Debug View</a>
     </div>
 </div>
 
 <div class="content-detail">
     <div class="card">
         <div class="card-header">
-            <h2 class="content-title">
-                {% if content is defined and content %}
-                    {% if content.title is defined and content.title %}
-                        {{ content.title }}
-                    {% else %}
-                        Untitled Content 
-                    {% endif %}
-                {% else %}
-                    No Content Available
-                {% endif %}
-            </h2>
+            <h2 class="content-title">{{ content.title|default('Untitled Content') }}</h2>
             <div class="content-meta">
-                <span class="badge badge-type">
-                    {% if content is defined and content %}
-                        {% if content.type is defined and content.type %}
-                            {{ content.type }}
-                        {% elif content.content_type is defined and content.content_type %}
-                            {{ content.content_type }}
-                        {% else %}
-                            Unknown Type
-                        {% endif %}
-                    {% else %}
-                        Unknown
-                    {% endif %}
-                </span>
-                <span class="content-date">
-                    {% if content is defined and content and content.created_at is defined %}
-                        {{ format_date(content.created_at) }}
-                    {% else %}
-                        Unknown Date
-                    {% endif %}
-                </span>
+                {% set content_type = content.type|default(content.content_type|default('Unknown')) %}
+                <span class="badge badge-type">{{ content_type }}</span>
+                <span class="content-date">{{ format_date(content.created_at) }}</span>
             </div>
         </div>
         
         <div class="card-body">
             <div class="content-section">
                 <h3>Summary</h3>
-                <p>
-                    {% if content is defined and content and content.summary is defined and content.summary %}
-                        {{ content.summary }}
-                    {% else %}
-                        No summary available for this content.
-                    {% endif %}
-                </p>
+                <p>{{ content.summary|default('No summary available.') }}</p>
             </div>
             
             <div class="content-section">
                 <h3>Source</h3>
-                {% if content is defined and content and content.source is defined and content.source %}
-                    {% if (content.type is defined and content.type == 'url') or (content.content_type is defined and content.content_type == 'url') %}
-                        <a href="{{ content.source }}" target="_blank" class="source-link">{{ content.source }}</a>
-                    {% else %}
-                        <p>{{ content.source }}</p>
-                    {% endif %}
+                {% set content_type = content.type|default(content.content_type|default('unknown')) %}
+                {% if content_type == 'url' and content.source %}
+                <a href="{{ content.source }}" target="_blank" class="source-link">{{ content.source }}</a>
                 {% else %}
-                    <p>Source not available</p>
+                <p>{{ content.source|default('Source not available') }}</p>
                 {% endif %}
             </div>
             
             <div class="content-section">
                 <h3>Content</h3>
                 <div class="content-text">
-                    {% if content is defined and content and content.content is defined and content.content %}
+                    {% if content.content %}
                         {{ content.content | safe }}
                     {% else %}
-                        <p>No content is available for display. This could be because:</p>
-                        <ul>
-                            <li>The content hasn't been processed yet</li>
-                            <li>The content ID is invalid</li>
-                            <li>There was an error retrieving the content</li>
-                        </ul>
+                        <p>Content not available. This might be a placeholder or demo item.</p>
                     {% endif %}
                 </div>
             </div>
             
-            {% if content is defined and content and content.entities is defined and content.entities %}
+            {% if content.entities and content.entities|length > 0 %}
             <div class="content-section">
                 <h3>Entities</h3>
                 <div class="entity-list">
                     {% for entity in content.entities %}
                     <div class="entity-item">
-                        <span class="entity-name">{{ entity.name if entity.name is defined else entity }}</span>
-                        <span class="entity-type">{{ entity.type if entity.type is defined else "Entity" }}</span>
+                        <span class="entity-name">{{ entity.name }}</span>
+                        <span class="entity-type">{{ entity.type }}</span>
                     </div>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
             
-            {% if content is defined and content and content.tags is defined and content.tags %}
+            {% if content.tags and content.tags|length > 0 %}
             <div class="content-section">
                 <h3>Tags</h3>
                 <div class="tag-list">
